@@ -479,6 +479,7 @@ const studies = isAuthenticated
                   const upRes = await fetch('/api/upload', {
                     method: 'POST',
                     headers: getAuthHeaders(false),
+                    credentials: 'same-origin',
                     body: fd,
                   });
                   const upData = await upRes.json();
@@ -504,6 +505,7 @@ const studies = isAuthenticated
               const res = await fetch('/api/studies', {
                 method: 'POST',
                 headers: getAuthHeaders(true),
+                credentials: 'same-origin',
                 body: JSON.stringify(payload),
               });
               const data = await res.json();
@@ -522,13 +524,19 @@ const studies = isAuthenticated
           document.querySelectorAll('.delete-study-btn').forEach((btn) => {
             btn.addEventListener('click', async () => {
               if (!confirm('Hapus studi kasus ini secara permanen?')) return;
-              const res = await fetch('/api/studies', {
+              const id = btn.dataset.id;
+              const res = await fetch(`/api/studies?id=${encodeURIComponent(id)}`, {
                 method: 'DELETE',
                 headers: getAuthHeaders(true),
-                body: JSON.stringify({ id: btn.dataset.id }),
+                credentials: 'same-origin',
+                body: JSON.stringify({ id }),
               });
-              if (res.ok) window.location.reload();
-              else alert('Gagal menghapus studi kasus');
+              if (res.ok) {
+                window.location.reload();
+              } else {
+                const data = await res.json().catch(() => ({}));
+                alert(data.error || `Gagal menghapus studi kasus (HTTP ${res.status})`);
+              }
             });
           });
 
@@ -566,6 +574,7 @@ const studies = isAuthenticated
             const res = await fetch('/api/careers', {
               method: 'POST',
               headers: getAuthHeaders(true),
+              credentials: 'same-origin',
               body: JSON.stringify(payload),
             });
             if (res.ok) {
@@ -580,13 +589,19 @@ const studies = isAuthenticated
           document.querySelectorAll('.delete-career-btn').forEach((btn) => {
             btn.addEventListener('click', async () => {
               if (!confirm('Hapus karier ini?')) return;
-              const res = await fetch('/api/careers', {
+              const id = btn.dataset.id;
+              const res = await fetch(`/api/careers?id=${encodeURIComponent(id)}`, {
                 method: 'DELETE',
                 headers: getAuthHeaders(true),
-                body: JSON.stringify({ id: btn.dataset.id }),
+                credentials: 'same-origin',
+                body: JSON.stringify({ id }),
               });
-              if (res.ok) window.location.reload();
-              else alert('Gagal menghapus karier');
+              if (res.ok) {
+                window.location.reload();
+              } else {
+                const data = await res.json().catch(() => ({}));
+                alert(data.error || `Gagal menghapus karier (HTTP ${res.status})`);
+              }
             });
           });
         </script>

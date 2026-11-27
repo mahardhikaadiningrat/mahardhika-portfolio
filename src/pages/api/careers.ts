@@ -4,16 +4,28 @@ import { isAdminAuthorized } from '../../lib/auth';
 
 export const prerender = false;
 
+export const GET: APIRoute = async () => {
+  try {
+    const careers = await sql`SELECT * FROM careers ORDER BY sort_order ASC`;
+    return new Response(JSON.stringify(careers), { status: 200 });
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: err?.message || 'Gagal memuat data karier.' }), {
+      status: 500,
+    });
+  }
+};
+
 export const POST: APIRoute = async ({ request, cookies }) => {
   if (!isAdminAuthorized(request, cookies)) {
-    return new Response(JSON.stringify({ error: 'Unauthorized — Silakan login ulang.' }), {
-      status: 401,
-    });
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized (Sesi login habis, silakan logout lalu login ulang).' }),
+      { status: 401 }
+    );
   }
 
   try {
-    const data = await request.json();
-    const { id, company, role, period, sort_order, summary, milestones } = data;
+    const body = await request.json();
+    const { id, company, role, period, sort_order, summary, milestones } = body;
 
     if (!company || !role || !period) {
       return new Response(
@@ -22,8 +34,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    const milestonesJson = JSON.stringify(Array.isArray(milestones) ? milestones : []);
-    const sortVal = Number(sort_order || 1);
+    const cleanMilestones = Array.isArray(milestones) ? milestones : [];
+    const orderNum = Number(sort_order || 1);
 
     if (id) {
       await sql`
@@ -32,39 +44,50 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           company = ${company},
           role = ${role},
           period = ${period},
-          sort_order = ${sortVal},
-          summary = ${summary || null},
-          milestones = ${milestonesJson}::jsonb
-        WHERE id = ${Number(id)}
+          sort_order = ${orderNum},
+          summary = ${summary || ''},
+          milestones = ${cleanMilestones}
+        WHERE id = ${id}
       `;
     } else {
       await sql`
         INSERT INTO careers (company, role, period, sort_order, summary, milestones)
-        VALUES (${company}, ${role}, ${period}, ${sortVal}, ${summary || null}, ${milestonesJson}::jsonb)
+        VALUES (${company}, ${role}, ${period}, ${orderNum}, ${summary || ''}, ${cleanMilestones})
       `;
     }
 
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message || 'Gagal menyimpan karier.' }), {
+    return new Response(JSON.stringify({ error: err?.message || 'Gagal menyimpan karier.' }), {
       status: 500,
     });
   }
 };
 
-export const DELETE: APIRoute = async ({ request, cookies }) => {
+export const DELETE: APIRoute = async ({ request, cookies, url }) => {
   if (!isAdminAuthorized(request, cookies)) {
-    return new Response(JSON.stringify({ error: 'Unauthorized — Silakan login ulang.' }), {
-      status: 401,
-    });
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized (Sesi login habis, silakan logout lalu login ulang).' }),
+      { status: 401 }
+    );
   }
 
   try {
-    const { id } = await request.json();
-    await sql`DELETE FROM careers WHERE id = ${Number(id)}`;
+    let id = url.searchParams.get('id');
+    if (!id) {
+      const body = await request.json().catch(() => ({}));
+      id = body.id;
+    }
+
+    if (!id) {
+      return new Response(JSON.stringify({ error: 'ID karier tidak ditemukan.' }), { status: 400 });
+    }
+
+    await sql`UPDATE case_studies SET career_id = NULL WHERE career_id = ${id}`;
+    await sql`DELETE FROM careers WHERE id = ${id}`;
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message || 'Gagal menghapus karier.' }), {
+    return new Response(JSON.stringify({ error: err?.message || 'Gagal menghapus karier.' }), {
       status: 500,
     });
   }

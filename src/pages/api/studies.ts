@@ -4,15 +4,27 @@ import { isAdminAuthorized } from '../../lib/auth';
 
 export const prerender = false;
 
+export const GET: APIRoute = async () => {
+  try {
+    const studies = await sql`SELECT * FROM case_studies ORDER BY created_at DESC`;
+    return new Response(JSON.stringify(studies), { status: 200 });
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: err?.message || 'Gagal memuat studi kasus.' }), {
+      status: 500,
+    });
+  }
+};
+
 export const POST: APIRoute = async ({ request, cookies }) => {
   if (!isAdminAuthorized(request, cookies)) {
-    return new Response(JSON.stringify({ error: 'Unauthorized — Silakan login ulang.' }), {
-      status: 401,
-    });
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized (Sesi login habis, silakan logout lalu login ulang).' }),
+      { status: 401 }
+    );
   }
 
   try {
-    const data = await request.json();
+    const body = await request.json();
     const {
       id,
       career_id,
@@ -25,77 +37,94 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       execution,
       results,
       photos,
-    } = data;
+    } = body;
 
     if (!title || !slug) {
-      return new Response(JSON.stringify({ error: 'Judul dan Slug wajib diisi.' }), {
-        status: 400,
-      });
+      return new Response(JSON.stringify({ error: 'Judul dan Slug wajib diisi.' }), { status: 400 });
     }
 
-    const categoriesJson = JSON.stringify(Array.isArray(categories) ? categories : []);
-    const executionJson = JSON.stringify(Array.isArray(execution) ? execution : []);
-    const resultsJson = JSON.stringify(Array.isArray(results) ? results : []);
-    const photosJson = JSON.stringify(Array.isArray(photos) ? photos : []);
-    const careerIdVal = career_id ? Number(career_id) : null;
+    const cleanCategories = Array.isArray(categories) ? categories : [];
+    const cleanExecution = Array.isArray(execution) ? execution : [];
+    const cleanResults = Array.isArray(results) ? results : [];
+    const cleanPhotos = Array.isArray(photos) ? photos : [];
+    const cleanCareerId = career_id || null;
 
     if (id) {
       await sql`
         UPDATE case_studies
         SET
-          career_id = ${careerIdVal},
+          career_id = ${cleanCareerId},
           title = ${title},
           slug = ${slug},
-          categories = ${categoriesJson}::jsonb,
+          categories = ${cleanCategories},
           live_url = ${live_url || null},
-          subtitle = ${subtitle || null},
-          challenge = ${challenge || null},
-          execution = ${executionJson}::jsonb,
-          results = ${resultsJson}::jsonb,
-          photos = ${photosJson}::jsonb
-        WHERE id = ${Number(id)}
+          subtitle = ${subtitle || ''},
+          challenge = ${challenge || ''},
+          execution = ${cleanExecution},
+          results = ${cleanResults},
+          photos = ${JSON.stringify(cleanPhotos)}::jsonb
+        WHERE id = ${id}
       `;
     } else {
       await sql`
         INSERT INTO case_studies (
-          career_id, title, slug, categories, live_url, subtitle, challenge, execution, results, photos
+          career_id,
+          title,
+          slug,
+          categories,
+          live_url,
+          subtitle,
+          challenge,
+          execution,
+          results,
+          photos
         )
         VALUES (
-          ${careerIdVal},
+          ${cleanCareerId},
           ${title},
           ${slug},
-          ${categoriesJson}::jsonb,
+          ${cleanCategories},
           ${live_url || null},
-          ${subtitle || null},
-          ${challenge || null},
-          ${executionJson}::jsonb,
-          ${resultsJson}::jsonb,
-          ${photosJson}::jsonb
+          ${subtitle || ''},
+          ${challenge || ''},
+          ${cleanExecution},
+          ${cleanResults},
+          ${JSON.stringify(cleanPhotos)}::jsonb
         )
       `;
     }
 
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message || 'Gagal menyimpan studi kasus.' }), {
+    return new Response(JSON.stringify({ error: err?.message || 'Gagal menyimpan studi kasus.' }), {
       status: 500,
     });
   }
 };
 
-export const DELETE: APIRoute = async ({ request, cookies }) => {
+export const DELETE: APIRoute = async ({ request, cookies, url }) => {
   if (!isAdminAuthorized(request, cookies)) {
-    return new Response(JSON.stringify({ error: 'Unauthorized — Silakan login ulang.' }), {
-      status: 401,
-    });
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized (Sesi login habis, silakan logout lalu login ulang).' }),
+      { status: 401 }
+    );
   }
 
   try {
-    const { id } = await request.json();
-    await sql`DELETE FROM case_studies WHERE id = ${Number(id)}`;
+    let id = url.searchParams.get('id');
+    if (!id) {
+      const body = await request.json().catch(() => ({}));
+      id = body.id;
+    }
+
+    if (!id) {
+      return new Response(JSON.stringify({ error: 'ID studi kasus tidak ditemukan.' }), { status: 400 });
+    }
+
+    await sql`DELETE FROM case_studies WHERE id = ${id}`;
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message || 'Gagal menghapus studi kasus.' }), {
+    return new Response(JSON.stringify({ error: err?.message || 'Gagal menghapus studi kasus.' }), {
       status: 500,
     });
   }
