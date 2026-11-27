@@ -1,16 +1,552 @@
 ---
+import '../styles/global.css';
+import { sql } from '../lib/db';
+
+export const prerender = false;
+
+const careers = await sql`SELECT * FROM careers ORDER BY sort_order ASC`;
+const studies = await sql`SELECT * FROM case_studies ORDER BY created_at DESC`;
+
+const allCategories: string[] = Array.from(
+  new Set(studies.flatMap((s: any) => s.categories || []))
+);
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mahardhika Adiningrat — Portfolio</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta
+      name="description"
+      content="Portfolio Mahardhika Adiningrat — Head of Marketing, Full-Stack Digital Marketer & Web Developer berbasis di Bali."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mahardhika Adiningrat — Portfolio" />
+    <meta
+      property="og:description"
+      content="Strategi komersial, kemitraan B2B, digital marketing & iklan online, pengembangan website kustom, SEO, dan dashboard analitik."
+    />
+  </head>
+  <body class="bg-slate-50 text-slate-900 antialiased">
+    <header class="border-b border-slate-200 bg-white/95 backdrop-blur sticky top-0 z-40">
+      <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <a href="/" class="gsap-logo inline-flex items-center gap-2.5 group" aria-label="Mahardhika Adiningrat Home">
+          <span class="w-9 h-9 rounded-xl bg-slate-900 text-white font-bold text-sm tracking-wider flex items-center justify-center shadow-xs group-hover:bg-emerald-600">
+            MA
+          </span>
+        </a>
+
+        <!-- Desktop Navigation -->
+        <nav class="hidden md:flex items-center gap-6 text-sm">
+          <a href="#careers" class="gsap-nav text-slate-600 hover:text-slate-900 font-medium">Focused Career</a>
+          <a href="#studies" class="gsap-nav text-slate-600 hover:text-slate-900 font-medium">Selected Case Studies</a>
+          <a href="#contact" class="gsap-nav text-slate-600 hover:text-slate-900 font-medium">Kontak</a>
+          <a
+            href="https://www.linkedin.com/in/mahardhika-adiningrat/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="gsap-nav gsap-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-900 text-white font-semibold hover:bg-emerald-600"
+          >
+            <span>Connect ke LinkedIn</span>
+            <span class="text-xs">↗</span>
+          </a>
+        </nav>
+
+        <!-- Mobile Hamburger Button -->
+        <button
+          id="mobile-menu-btn"
+          type="button"
+          aria-label="Buka Menu Navigasi"
+          aria-expanded="false"
+          class="md:hidden inline-flex items-center justify-center p-2 rounded-lg text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+        >
+          <svg id="icon-hamburger" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+          <svg id="icon-close" class="w-6 h-6 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Indikator Progres Gulir Lenis -->
+      <div id="scroll-progress" class="h-[2px] bg-emerald-600 origin-left scale-x-0 w-full"></div>
+
+      <!-- Mobile Dropdown Menu -->
+      <div id="mobile-menu" class="hidden md:hidden border-t border-slate-200 bg-white px-6 py-4 space-y-3 shadow-sm overflow-hidden">
+        <a href="#careers" class="mobile-nav-link block py-1.5 text-sm font-medium text-slate-700 hover:text-emerald-600">
+          Focused Career
+        </a>
+        <a href="#studies" class="mobile-nav-link block py-1.5 text-sm font-medium text-slate-700 hover:text-emerald-600">
+          Selected Case Studies
+        </a>
+        <a href="#contact" class="mobile-nav-link block py-1.5 text-sm font-medium text-slate-700 hover:text-emerald-600">
+          Kontak
+        </a>
+        <div class="pt-2 border-t border-slate-100">
+          <a
+            href="https://www.linkedin.com/in/mahardhika-adiningrat/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="mobile-nav-link w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-emerald-600"
+          >
+            <span>Connect ke LinkedIn</span>
+            <span class="text-xs">↗</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-6 py-14 space-y-20">
+      <!-- Hero Section + 4 Scorecard -->
+      <section class="hero-section space-y-6 max-w-4xl">
+        <span class="hero-item inline-block text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+          Head of Marketing • Full-Stack Digital Marketer • Web Developer
+        </span>
+        <h1 class="hero-item text-4xl md:text-5xl font-bold tracking-tight text-slate-900">
+          Mahardhika Adiningrat
+        </h1>
+        <p class="hero-item text-slate-600 leading-relaxed text-base md:text-lg max-w-3xl">
+          Membangun sistem pertumbuhan bisnis dari hulu ke hilir: mulai dari strategi komersial, kemitraan B2B, dan manajemen kampanye digital marketing serta iklan online hingga pengembangan website kustom, SEO, dan dashboard analitik. Berpengalaman memimpin tim marketing rumah sakit sekaligus menangani ekosistem digital lebih dari 10 brand di sektor kesehatan, estetika, edukasi, dan ritel.
+        </p>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-3">
+          <div class="hero-card gsap-hover-card p-4 rounded-xl bg-white border border-slate-200 shadow-xs">
+            <div class="text-2xl font-bold text-slate-900">
+              <span class="stat-num" data-target="4" data-decimals="0">4</span>+ Tahun
+            </div>
+            <div class="text-xs text-slate-500 mt-1">Healthcare &amp; Digital Leadership</div>
+          </div>
+          <div class="hero-card gsap-hover-card p-4 rounded-xl bg-white border border-slate-200 shadow-xs">
+            <div class="text-2xl font-bold text-emerald-600">
+              +<span class="stat-num" data-target="26.59" data-decimals="2">26,59</span>%
+            </div>
+            <div class="text-xs text-slate-500 mt-1">YoY Growth (106,55% Target YTD)</div>
+          </div>
+          <div class="hero-card gsap-hover-card p-4 rounded-xl bg-white border border-slate-200 shadow-xs">
+            <div class="text-2xl font-bold text-slate-900">
+              <span class="stat-num" data-target="10" data-decimals="0">10</span>+ Brand
+            </div>
+            <div class="text-xs text-slate-500 mt-1">Healthcare, Estetika, Edukasi &amp; Ritel</div>
+          </div>
+          <div class="hero-card gsap-hover-card p-4 rounded-xl bg-white border border-slate-200 shadow-xs">
+            <div class="text-2xl font-bold text-emerald-600">
+              &lt;<span class="stat-num" data-target="0.8" data-decimals="1">0,8</span>%
+            </div>
+            <div class="text-xs text-slate-500 mt-1">Marketing Spend Ratio</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Focused Career Section -->
+      <section id="careers" class="reveal-section space-y-6">
+        <div class="reveal-header">
+          <h2 class="text-2xl font-bold text-slate-900">Focused Career</h2>
+          <p class="text-sm text-slate-500">Klik kartu karier untuk melihat daftar portfolio &amp; case study di dalamnya.</p>
+        </div>
+        {careers.length === 0 ? (
+          <div class="reveal-card p-8 rounded-2xl bg-white border border-dashed border-slate-300 text-center space-y-3">
+            <p class="text-sm text-slate-600">Database Neon masih kosong. Buka halaman <code>/admin</code> untuk mengisi data awal.</p>
+          </div>
+        ) : (
+          <div class="grid md:grid-cols-3 gap-5">
+            {careers.map((c: any) => (
+              <a
+                href={`/career/${c.id}`}
+                class="reveal-card gsap-hover-card group p-6 rounded-2xl bg-white border border-slate-200 hover:border-emerald-500 shadow-xs flex flex-col justify-between"
+              >
+                <div class="space-y-3">
+                  <div class="text-xs text-emerald-600 font-semibold">{c.period}</div>
+                  <h3 class="text-lg font-bold text-slate-900 group-hover:text-emerald-700">{c.company}</h3>
+                  <div class="text-sm text-slate-700 font-medium">{c.role}</div>
+                  <p class="text-sm text-slate-600 line-clamp-3">{c.summary}</p>
+                </div>
+                <div class="mt-6 text-xs font-semibold text-emerald-600 inline-flex items-center gap-1">
+                  <span>Lihat Detail Karier &amp; Proyek</span>
+                  <span class="card-arrow">→</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <!-- Selected Case Studies Section -->
+      <section id="studies" class="reveal-section space-y-6">
+        <div class="reveal-header flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-bold text-slate-900">Selected Case Studies</h2>
+            <p class="text-sm text-slate-500">Filter berdasarkan disiplin keahlian lalu klik untuk membuka detail lengkap.</p>
+          </div>
+          <div class="flex flex-wrap gap-2" id="category-filters">
+            <button data-cat="ALL" class="filter-btn gsap-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white">
+              Semua
+            </button>
+            {allCategories.map((cat) => (
+              <button data-cat={cat} class="filter-btn gsap-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-slate-700 border border-slate-200 hover:border-slate-400">
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6" id="studies-grid">
+          {studies.map((s: any) => (
+            <a
+              href={`/study/${s.slug}`}
+              data-categories={JSON.stringify(s.categories || [])}
+              class="study-card reveal-card gsap-hover-card group p-6 rounded-2xl bg-white border border-slate-200 hover:border-emerald-500 shadow-xs space-y-4 block"
+            >
+              <div class="flex flex-wrap gap-1.5">
+                {(s.categories || []).map((cat: string) => (
+                  <span class="text-[11px] font-medium px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700">{cat}</span>
+                ))}
+              </div>
+              <h3 class="text-xl font-bold text-slate-900 group-hover:text-emerald-700">{s.title}</h3>
+              <p class="text-sm text-slate-600">{s.subtitle || s.challenge}</p>
+              <div class="text-xs font-semibold text-emerald-600 pt-2 inline-flex items-center gap-1">
+                <span>Buka Studi Kasus Lengkap</span>
+                <span class="card-arrow">→</span>
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <!-- Contact CTA Section -->
+      <section id="contact" class="reveal-section rounded-3xl bg-white border border-slate-200 p-8 md:p-12 shadow-xs">
+        <div class="max-w-3xl space-y-5">
+          <span class="reveal-item inline-block text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+            Kolaborasi &amp; Konsultasi
+          </span>
+          <h2 class="reveal-item text-3xl md:text-4xl font-bold tracking-tight text-slate-900">
+            Siap Mendorong Pertumbuhan Komersial &amp; Ekosistem Digital Anda?
+          </h2>
+          <p class="reveal-item text-slate-600 text-base leading-relaxed">
+            Terbuka untuk diskusi strategis seputar kepemimpinan pemasaran, kemitraan B2B, pengembangan website kustom berkecepatan tinggi, SEO/GEO, maupun kampanye iklan berbasis data.
+          </p>
+
+          <div class="reveal-item flex flex-wrap items-center gap-3 pt-2">
+            <a
+              href="mailto:mahardhikadiningrat@gmail.com"
+              class="gsap-btn inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800"
+            >
+              <span>Kirim Email</span>
+              <span>→</span>
+            </a>
+
+            <a
+              href="https://www.linkedin.com/in/mahardhika-adiningrat/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="gsap-btn inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700"
+            >
+              <span>Terhubung di LinkedIn</span>
+              <span>↗</span>
+            </a>
+          </div>
+
+          <div class="reveal-item pt-6 mt-6 border-t border-slate-100 grid sm:grid-cols-3 gap-4 text-xs text-slate-600">
+            <div>
+              <div class="font-semibold text-slate-900">Email</div>
+              <a href="mailto:mahardhikadiningrat@gmail.com" class="hover:text-emerald-600">
+                mahardhikadiningrat@gmail.com
+              </a>
+            </div>
+            <div>
+              <div class="font-semibold text-slate-900">WhatsApp / Telepon</div>
+              <a href="https://wa.me/6282147883637" target="_blank" rel="noopener noreferrer" class="hover:text-emerald-600">
+                +62 821-4788-3637
+              </a>
+            </div>
+            <div>
+              <div class="font-semibold text-slate-900">Lokasi</div>
+              <span>Gianyar &amp; Ubud, Bali — Indonesia</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="border-t border-slate-200 bg-white mt-12">
+      <div class="max-w-6xl mx-auto px-6 py-6 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500">
+        <span>© {new Date().getFullYear()} Mahardhika Adiningrat. All rights reserved.</span>
+        <div class="flex items-center gap-5">
+          <a href="#careers" class="hover:text-slate-900">Focused Career</a>
+          <a href="#studies" class="hover:text-slate-900">Case Studies</a>
+          <a href="#contact" class="hover:text-slate-900">Kontak</a>
+          <a href="https://www.linkedin.com/in/mahardhika-adiningrat/" target="_blank" rel="noopener noreferrer" class="hover:text-slate-900">LinkedIn</a>
+        </div>
+      </div>
+    </footer>
+
+    <style is:global>
+      html.lenis, html.lenis body {
+        height: auto;
+      }
+      .lenis.lenis-smooth {
+        scroll-behavior: auto !important;
+      }
+      .lenis.lenis-smooth [data-lenis-prevent] {
+        overscroll-behavior: contain;
+      }
+      .lenis.lenis-stopped {
+        overflow: hidden;
+      }
+    </style>
+
+    <script>
+      import gsap from 'gsap';
+      import { ScrollTrigger } from 'gsap/ScrollTrigger';
+      import { initSmoothScroll } from '../scripts/smooth-scroll';
+
+      gsap.registerPlugin(ScrollTrigger);
+
+      const lenis = initSmoothScroll({
+        progressBarSelector: '#scroll-progress',
+        velocitySkewSelector: '.study-card',
+      });
+
+      const heroTl = gsap.timeline({ defaults: { ease: 'power3.out', duration: 0.75 } });
+
+      heroTl
+        .from('.gsap-logo', {
+          x: -18,
+          scale: 0.9,
+          opacity: 0,
+          clearProps: 'transform',
+        })
+        .from(
+          '.gsap-nav',
+          {
+            y: -14,
+            opacity: 0,
+            stagger: 0.06,
+            clearProps: 'transform',
+          },
+          '-=0.55'
+        )
+        .from(
+          '.hero-item',
+          {
+            y: 34,
+            skewY: 1.2,
+            opacity: 0,
+            stagger: 0.06,
+            clearProps: 'transform',
+          },
+          '-=0.5'
+        )
+        .from(
+          '.hero-card',
+          {
+            y: 34,
+            rotationX: -12,
+            transformPerspective: 800,
+            opacity: 0,
+            stagger: 0.06,
+            clearProps: 'transform',
+          },
+          '-=0.45'
+        );
+
+      document.querySelectorAll('.stat-num').forEach((el) => {
+        const target = parseFloat(el.getAttribute('data-target') || '0');
+        const decimals = parseInt(el.getAttribute('data-decimals') || '0', 10);
+        const counter = { val: 0 };
+        heroTl.to(
+          counter,
+          {
+            val: target,
+            duration: 1.05,
+            ease: 'power3.out',
+            onUpdate: () => {
+              el.textContent = counter.val.toFixed(decimals).replace('.', ',');
+            },
+          },
+          0.35
+        );
+      });
+
+      document.querySelectorAll('.reveal-section').forEach((section) => {
+        const headerEls = section.querySelectorAll('.reveal-header');
+        const cardEls = section.querySelectorAll('.reveal-card');
+        const itemEls = section.querySelectorAll('.reveal-item');
+
+        const sectionTl = gsap.timeline({
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 84%',
+            once: true,
+          },
+          defaults: { ease: 'power3.out', duration: 0.7 },
+        });
+
+        if (headerEls.length) {
+          sectionTl.from(headerEls, {
+            y: 26,
+            clipPath: 'inset(0% 0% 100% 0%)',
+            opacity: 0,
+            stagger: 0.06,
+            clearProps: 'clipPath,transform',
+          });
+        }
+
+        if (cardEls.length) {
+          sectionTl.from(
+            cardEls,
+            {
+              y: 32,
+              scale: 0.96,
+              opacity: 0,
+              stagger: 0.06,
+              clearProps: 'transform',
+            },
+            headerEls.length ? '-=0.45' : 0
+          );
+        }
+
+        if (itemEls.length) {
+          sectionTl.from(
+            itemEls,
+            {
+              y: 26,
+              opacity: 0,
+              stagger: 0.06,
+              clearProps: 'transform',
+            },
+            '-=0.45'
+          );
+        }
+      });
+
+      document.querySelectorAll('.gsap-hover-card').forEach((card) => {
+        const arrow = card.querySelector('.card-arrow');
+        card.addEventListener('mouseenter', () => {
+          gsap.to(card, {
+            y: -4,
+            boxShadow: '0 12px 24px -8px rgba(15, 23, 42, 0.08)',
+            duration: 0.35,
+            ease: 'power3.out',
+          });
+          if (arrow) {
+            gsap.to(arrow, { x: 4, duration: 0.3, ease: 'power3.out' });
+          }
+        });
+        card.addEventListener('mouseleave', () => {
+          gsap.to(card, {
+            y: 0,
+            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+            duration: 0.35,
+            ease: 'power3.out',
+          });
+          if (arrow) {
+            gsap.to(arrow, { x: 0, duration: 0.3, ease: 'power3.out' });
+          }
+        });
+      });
+
+      document.querySelectorAll('.gsap-btn').forEach((btn) => {
+        btn.addEventListener('mouseenter', () => {
+          gsap.to(btn, { y: -2, scale: 1.02, duration: 0.25, ease: 'power3.out' });
+        });
+        btn.addEventListener('mouseleave', () => {
+          gsap.to(btn, { y: 0, scale: 1, duration: 0.25, ease: 'power3.out' });
+        });
+      });
+
+      const menuBtn = document.getElementById('mobile-menu-btn');
+      const mobileMenu = document.getElementById('mobile-menu');
+      const iconHamburger = document.getElementById('icon-hamburger');
+      const iconClose = document.getElementById('icon-close');
+      let isMenuOpen = false;
+
+      function setMobileMenu(open: boolean) {
+        if (!mobileMenu || !menuBtn || !iconHamburger || !iconClose) return;
+        isMenuOpen = open;
+        menuBtn.setAttribute('aria-expanded', String(open));
+        iconHamburger.classList.toggle('hidden', open);
+        iconClose.classList.toggle('hidden', !open);
+
+        if (open) {
+          lenis.stop();
+          mobileMenu.classList.remove('hidden');
+          gsap.fromTo(
+            mobileMenu,
+            { height: 0, opacity: 0 },
+            { height: 'auto', opacity: 1, duration: 0.35, ease: 'power3.out', clearProps: 'height' }
+          );
+          gsap.from('.mobile-nav-link', {
+            x: -14,
+            opacity: 0,
+            stagger: 0.06,
+            duration: 0.35,
+            ease: 'power3.out',
+            clearProps: 'transform',
+          });
+        } else {
+          lenis.start();
+          gsap.to(mobileMenu, {
+            height: 0,
+            opacity: 0,
+            duration: 0.25,
+            ease: 'power3.out',
+            onComplete: () => {
+              mobileMenu.classList.add('hidden');
+              gsap.set(mobileMenu, { clearProps: 'all' });
+            },
+          });
+        }
+      }
+
+      menuBtn?.addEventListener('click', () => setMobileMenu(!isMenuOpen));
+      document.querySelectorAll('.mobile-nav-link').forEach((link) => {
+        link.addEventListener('click', () => {
+          if (isMenuOpen) setMobileMenu(false);
+        });
+      });
+
+      const btns = document.querySelectorAll('.filter-btn');
+      const cards = Array.from(document.querySelectorAll('.study-card')) as HTMLElement[];
+
+      btns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const cat = btn.getAttribute('data-cat');
+          btns.forEach((b) => {
+            b.className = 'filter-btn gsap-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-slate-700 border border-slate-200 hover:border-slate-400';
+          });
+          btn.className = 'filter-btn gsap-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white';
+
+          const visibleCards: HTMLElement[] = [];
+          cards.forEach((card) => {
+            const list = JSON.parse(card.getAttribute('data-categories') || '[]');
+            const show = cat === 'ALL' || list.includes(cat);
+            card.classList.toggle('hidden', !show);
+            if (show) visibleCards.push(card);
+          });
+
+          if (visibleCards.length) {
+            gsap.fromTo(
+              visibleCards,
+              { y: 20, scale: 0.97, opacity: 0 },
+              {
+                y: 0,
+                scale: 1,
+                opacity: 1,
+                duration: 0.45,
+                stagger: 0.06,
+                ease: 'power3.out',
+                clearProps: 'transform',
+              }
+            );
+          }
+
+          lenis.resize();
+          ScrollTrigger.refresh();
+        });
+      });
+    </script>
+  </body>
 </html>

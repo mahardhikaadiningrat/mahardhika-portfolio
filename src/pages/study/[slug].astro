@@ -1,0 +1,398 @@
+---
+import '../../styles/global.css';
+import { sql } from '../../lib/db';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+const decodedSlug = decodeURIComponent(slug || '');
+
+const rows = await sql`SELECT * FROM case_studies WHERE slug = ${decodedSlug} LIMIT 1`;
+const study = rows[0];
+
+if (!study) {
+  return Astro.redirect('/');
+}
+
+const careerRows = study.career_id
+  ? await sql`SELECT * FROM careers WHERE id = ${study.career_id} LIMIT 1`
+  : [];
+const career = careerRows[0];
+
+function parseBulletPoints(raw: unknown): string[] {
+  const list = Array.isArray(raw) ? raw : typeof raw === 'string' ? [raw] : [];
+  const output: string[] = [];
+
+  for (const item of list) {
+    const text = String(item || '').trim();
+    if (!text) continue;
+
+    // 1. Pecah berdasarkan baris baru (\n) terlebih dahulu
+    const lines = text.split(/\r?\n+/);
+
+    for (const line of lines) {
+      // 2. Pisahkan titik yang langsung diikuti huruf kapital (contoh: "...target.Menjaga...")
+      const separated = line.replace(/\.([A-Z])/g, '.\n$1').split('\n');
+      for (const part of separated) {
+        const cleaned = part.replace(/^[\s•\-\*\u2022\u25CF\d\.]+/, '').trim();
+        if (cleaned) output.push(cleaned);
+      }
+    }
+  }
+
+  return output;
+}
+
+const photos: { url: string; caption?: string }[] = Array.isArray(study.photos)
+  ? study.photos
+  : [];
+const execution: string[] = parseBulletPoints(study.execution);
+const results: string[] = parseBulletPoints(study.results);
+const categories: string[] = Array.isArray(study.categories) ? study.categories : [];
+---
+
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{study.title} — Mahardhika Adiningrat</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="description" content={study.subtitle || study.challenge || study.title} />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content={`${study.title} — Mahardhika Adiningrat`} />
+    <meta property="og:description" content={study.subtitle || study.challenge || study.title} />
+  </head>
+  <body class="bg-slate-50 text-slate-900 antialiased">
+    <header class="border-b border-slate-200 bg-white/95 backdrop-blur sticky top-0 z-40">
+      <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <a href="/" class="gsap-logo inline-flex items-center gap-2.5 group" aria-label="Mahardhika Adiningrat Home">
+          <span class="w-9 h-9 rounded-xl bg-slate-900 text-white font-bold text-sm tracking-wider flex items-center justify-center shadow-xs group-hover:bg-emerald-600">
+            MA
+          </span>
+        </a>
+
+        <!-- Desktop Navigation -->
+        <nav class="hidden md:flex items-center gap-6 text-sm">
+          <a href="/#careers" class="gsap-nav text-slate-600 hover:text-slate-900 font-medium">Focused Career</a>
+          <a href="/#studies" class="gsap-nav text-slate-600 hover:text-slate-900 font-medium">Selected Case Studies</a>
+          <a href="/#contact" class="gsap-nav text-slate-600 hover:text-slate-900 font-medium">Kontak</a>
+          <a
+            href="https://www.linkedin.com/in/mahardhika-adiningrat/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="gsap-nav gsap-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-900 text-white font-semibold hover:bg-emerald-600"
+          >
+            <span>Connect ke LinkedIn</span>
+            <span class="text-xs">↗</span>
+          </a>
+        </nav>
+
+        <!-- Mobile Hamburger Button -->
+        <button
+          id="mobile-menu-btn"
+          type="button"
+          aria-label="Buka Menu Navigasi"
+          aria-expanded="false"
+          class="md:hidden inline-flex items-center justify-center p-2 rounded-lg text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+        >
+          <svg id="icon-hamburger" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+          <svg id="icon-close" class="w-6 h-6 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Indikator Progres Gulir Lenis -->
+      <div id="scroll-progress" class="h-[2px] bg-emerald-600 origin-left scale-x-0 w-full"></div>
+
+      <!-- Mobile Dropdown Menu -->
+      <div id="mobile-menu" class="hidden md:hidden border-t border-slate-200 bg-white px-6 py-4 space-y-3 shadow-sm overflow-hidden">
+        <a href="/#careers" class="mobile-nav-link block py-1.5 text-sm font-medium text-slate-700 hover:text-emerald-600">
+          Focused Career
+        </a>
+        <a href="/#studies" class="mobile-nav-link block py-1.5 text-sm font-medium text-slate-700 hover:text-emerald-600">
+          Selected Case Studies
+        </a>
+        <a href="/#contact" class="mobile-nav-link block py-1.5 text-sm font-medium text-slate-700 hover:text-emerald-600">
+          Kontak
+        </a>
+        <div class="pt-2 border-t border-slate-100">
+          <a
+            href="https://www.linkedin.com/in/mahardhika-adiningrat/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="mobile-nav-link w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-emerald-600"
+          >
+            <span>Connect ke LinkedIn</span>
+            <span class="text-xs">↗</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-6 py-12 space-y-12">
+      <!-- Breadcrumb & Header Case Study -->
+      <section class="space-y-5">
+        <div class="hero-item flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <a href="/" class="hover:text-slate-900 font-medium">← Kembali ke Portfolio</a>
+          {career && (
+            <>
+              <span>/</span>
+              <a href={`/career/${career.id}`} class="text-emerald-600 font-semibold hover:underline">
+                {career.company}
+              </a>
+            </>
+          )}
+        </div>
+
+        <div class="hero-item flex flex-wrap gap-2">
+          {categories.map((cat) => (
+            <span class="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              {cat}
+            </span>
+          ))}
+        </div>
+
+        <h1 class="hero-item text-3xl md:text-4xl font-bold tracking-tight text-slate-900 leading-tight">
+          {study.title}
+        </h1>
+
+        {study.subtitle && (
+          <p class="hero-item text-base md:text-lg text-slate-600 leading-relaxed">
+            {study.subtitle}
+          </p>
+        )}
+
+        {study.live_url && (
+          <div class="hero-item pt-1">
+            <a
+              href={study.live_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="gsap-btn inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-emerald-600"
+            >
+              <span>Kunjungi Website / Proyek Live</span>
+              <span>↗</span>
+            </a>
+          </div>
+        )}
+      </section>
+
+      <!-- Galeri Foto / Mockup (Jika ada) -->
+      {photos.length > 0 && (
+        <section class="reveal-section space-y-4">
+          <h2 class="reveal-header text-lg font-bold text-slate-900">Visual &amp; Dokumentasi Proyek</h2>
+          <div class={`grid gap-5 ${photos.length > 1 ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
+            {photos.map((photo) => (
+              <figure class="reveal-card gsap-hover-card rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-xs">
+                <img
+                  src={photo.url}
+                  alt={photo.caption || study.title}
+                  loading="lazy"
+                  class="w-full h-auto object-cover"
+                />
+                {photo.caption && (
+                  <figcaption class="px-4 py-3 text-xs text-slate-600 border-t border-slate-100 bg-white">
+                    {photo.caption}
+                  </figcaption>
+                )}
+              </figure>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <!-- Tantangan / Latar Belakang -->
+      {study.challenge && (
+        <section class="reveal-section rounded-2xl bg-white border border-slate-200 p-6 md:p-8 shadow-xs space-y-3">
+          <div class="reveal-item text-xs font-bold uppercase tracking-wider text-slate-400">
+            01 • Tantangan &amp; Latar Belakang
+          </div>
+          <p class="reveal-item text-slate-700 leading-relaxed text-sm md:text-base">
+            {study.challenge}
+          </p>
+        </section>
+      )}
+
+      <!-- Penjabaran Pekerjaan & Hasil Pekerjaan -->
+      <div class="grid md:grid-cols-2 gap-6">
+        {execution.length > 0 && (
+          <section class="reveal-section rounded-2xl bg-white border border-slate-200 p-6 md:p-8 shadow-xs space-y-4">
+            <div class="reveal-item text-xs font-bold uppercase tracking-wider text-slate-400">
+              02 • Penjabaran Pekerjaan
+            </div>
+            <ul class="space-y-3">
+              {execution.map((item) => (
+                <li class="reveal-item flex items-start gap-3 text-sm text-slate-700 leading-relaxed">
+                  <span class="w-1.5 h-1.5 rounded-full bg-slate-900 mt-2 shrink-0"></span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {results.length > 0 && (
+          <section class="reveal-section rounded-2xl bg-emerald-50/60 border border-emerald-200 p-6 md:p-8 shadow-xs space-y-4">
+            <div class="reveal-item text-xs font-bold uppercase tracking-wider text-emerald-700">
+              03 • Dampak &amp; Hasil Pekerjaan
+            </div>
+            <ul class="space-y-3">
+              {results.map((item) => (
+                <li class="reveal-item flex items-start gap-3 text-sm text-slate-800 font-medium leading-relaxed">
+                  <span class="text-emerald-600 font-bold mt-0.5 shrink-0">✓</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
+
+      <!-- CTA Bawah -->
+      <section class="reveal-section rounded-2xl bg-white border border-slate-200 p-6 md:p-8 shadow-xs flex flex-wrap items-center justify-between gap-4">
+        <div class="reveal-item space-y-1">
+          <h3 class="text-base font-bold text-slate-900">Tertarik mendiskusikan studi kasus serupa?</h3>
+          <p class="text-xs text-slate-600">Hubungi langsung untuk konsultasi strategi pemasaran atau pengembangan sistem digital.</p>
+        </div>
+        <div class="reveal-item flex flex-wrap items-center gap-3">
+          <a
+            href="mailto:mahardhikadiningrat@gmail.com"
+            class="gsap-btn px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800"
+          >
+            Kirim Email →
+          </a>
+          <a
+            href="/#studies"
+            class="gsap-btn px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-xs font-bold hover:bg-slate-200"
+          >
+            Studi Kasus Lainnya
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="border-t border-slate-200 bg-white mt-12">
+      <div class="max-w-6xl mx-auto px-6 py-6 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500">
+        <span>© {new Date().getFullYear()} Mahardhika Adiningrat. All rights reserved.</span>
+        <div class="flex items-center gap-5">
+          <a href="/#careers" class="hover:text-slate-900">Focused Career</a>
+          <a href="/#studies" class="hover:text-slate-900">Case Studies</a>
+          <a href="/#contact" class="hover:text-slate-900">Kontak</a>
+          <a href="https://www.linkedin.com/in/mahardhika-adiningrat/" target="_blank" rel="noopener noreferrer" class="hover:text-slate-900">LinkedIn</a>
+        </div>
+      </div>
+    </footer>
+
+    <style is:global>
+      html.lenis, html.lenis body { height: auto; }
+      .lenis.lenis-smooth { scroll-behavior: auto !important; }
+      .lenis.lenis-stopped { overflow: hidden; }
+    </style>
+
+    <script>
+      import gsap from 'gsap';
+      import { ScrollTrigger } from 'gsap/ScrollTrigger';
+      import { initSmoothScroll } from '../../scripts/smooth-scroll';
+
+      gsap.registerPlugin(ScrollTrigger);
+
+      const lenis = initSmoothScroll({
+        progressBarSelector: '#scroll-progress',
+      });
+
+      const heroTl = gsap.timeline({ defaults: { ease: 'power3.out', duration: 0.7 } });
+      heroTl
+        .from('.gsap-logo', { x: -16, scale: 0.9, opacity: 0, clearProps: 'transform' })
+        .from('.gsap-nav', { y: -12, opacity: 0, stagger: 0.06, clearProps: 'transform' }, '-=0.5')
+        .from('.hero-item', { y: 28, skewY: 1, opacity: 0, stagger: 0.06, clearProps: 'transform' }, '-=0.45');
+
+      document.querySelectorAll('.reveal-section').forEach((section) => {
+        const headerEls = section.querySelectorAll('.reveal-header');
+        const cardEls = section.querySelectorAll('.reveal-card');
+        const itemEls = section.querySelectorAll('.reveal-item');
+
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 86%',
+            once: true,
+          },
+          defaults: { ease: 'power3.out', duration: 0.65 },
+        });
+
+        if (headerEls.length) {
+          tl.from(headerEls, {
+            y: 22,
+            clipPath: 'inset(0% 0% 100% 0%)',
+            opacity: 0,
+            stagger: 0.06,
+            clearProps: 'clipPath,transform',
+          });
+        }
+        if (cardEls.length) {
+          tl.from(cardEls, { y: 28, scale: 0.96, opacity: 0, stagger: 0.06, clearProps: 'transform' }, headerEls.length ? '-=0.4' : 0);
+        }
+        if (itemEls.length) {
+          tl.from(itemEls, { y: 22, opacity: 0, stagger: 0.06, clearProps: 'transform' }, '-=0.35');
+        }
+      });
+
+      document.querySelectorAll('.gsap-hover-card').forEach((card) => {
+        card.addEventListener('mouseenter', () => {
+          gsap.to(card, { y: -4, boxShadow: '0 12px 24px -8px rgba(15, 23, 42, 0.08)', duration: 0.35, ease: 'power3.out' });
+        });
+        card.addEventListener('mouseleave', () => {
+          gsap.to(card, { y: 0, boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', duration: 0.35, ease: 'power3.out' });
+        });
+      });
+
+      document.querySelectorAll('.gsap-btn').forEach((btn) => {
+        btn.addEventListener('mouseenter', () => gsap.to(btn, { y: -2, scale: 1.02, duration: 0.25, ease: 'power3.out' }));
+        btn.addEventListener('mouseleave', () => gsap.to(btn, { y: 0, scale: 1, duration: 0.25, ease: 'power3.out' }));
+      });
+
+      const menuBtn = document.getElementById('mobile-menu-btn');
+      const mobileMenu = document.getElementById('mobile-menu');
+      const iconHamburger = document.getElementById('icon-hamburger');
+      const iconClose = document.getElementById('icon-close');
+      let isMenuOpen = false;
+
+      function setMobileMenu(open: boolean) {
+        if (!mobileMenu || !menuBtn || !iconHamburger || !iconClose) return;
+        isMenuOpen = open;
+        menuBtn.setAttribute('aria-expanded', String(open));
+        iconHamburger.classList.toggle('hidden', open);
+        iconClose.classList.toggle('hidden', !open);
+
+        if (open) {
+          lenis.stop();
+          mobileMenu.classList.remove('hidden');
+          gsap.fromTo(mobileMenu, { height: 0, opacity: 0 }, { height: 'auto', opacity: 1, duration: 0.35, ease: 'power3.out', clearProps: 'height' });
+          gsap.from('.mobile-nav-link', { x: -14, opacity: 0, stagger: 0.06, duration: 0.35, ease: 'power3.out', clearProps: 'transform' });
+        } else {
+          lenis.start();
+          gsap.to(mobileMenu, {
+            height: 0,
+            opacity: 0,
+            duration: 0.25,
+            ease: 'power3.out',
+            onComplete: () => {
+              mobileMenu.classList.add('hidden');
+              gsap.set(mobileMenu, { clearProps: 'all' });
+            },
+          });
+        }
+      }
+
+      menuBtn?.addEventListener('click', () => setMobileMenu(!isMenuOpen));
+      document.querySelectorAll('.mobile-nav-link').forEach((link) => {
+        link.addEventListener('click', () => {
+          if (isMenuOpen) setMobileMenu(false);
+        });
+      });
+    </script>
+  </body>
+</html>

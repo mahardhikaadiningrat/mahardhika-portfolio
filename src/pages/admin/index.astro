@@ -1,0 +1,596 @@
+---
+import '../../styles/global.css';
+import { sql } from '../../lib/db';
+import { createSessionToken, getAdminCredentials } from '../api/auth';
+
+export const prerender = false;
+
+const { validUser, validPass } = getAdminCredentials();
+const expectedToken = validPass ? createSessionToken(validUser, validPass) : '';
+
+const sessionCookie = Astro.cookies.get('admin_session')?.value;
+const isAuthenticated = Boolean(expectedToken && sessionCookie === expectedToken);
+
+const careers = isAuthenticated
+  ? await sql`SELECT * FROM careers ORDER BY sort_order ASC`
+  : [];
+const studies = isAuthenticated
+  ? await sql`SELECT * FROM case_studies ORDER BY created_at DESC`
+  : [];
+---
+
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{isAuthenticated ? 'Admin CMS — Mahardhika Adiningrat' : 'Login Admin — Mahardhika Adiningrat'}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="robots" content="noindex, nofollow" />
+  </head>
+  <body class="bg-slate-50 text-slate-900 antialiased min-h-screen">
+    {!isAuthenticated ? (
+      <>
+        <main class="min-h-screen flex items-center justify-center px-6 py-12">
+          <div class="w-full max-w-md p-8 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-6">
+            <div class="flex items-center justify-between">
+              <a href="/" class="w-10 h-10 rounded-xl bg-slate-900 text-white font-bold text-sm tracking-wider flex items-center justify-center">
+                MA
+              </a>
+              <a href="/" class="text-xs font-medium text-slate-500 hover:text-slate-900">
+                ← Kembali ke Portfolio
+              </a>
+            </div>
+
+            <div class="space-y-1.5">
+              <h1 class="text-2xl font-bold tracking-tight text-slate-900">Login Admin CMS</h1>
+              <p class="text-xs text-slate-500">
+                Masukkan username dan password administrator untuk mengelola konten portfolio.
+              </p>
+            </div>
+
+            <div id="login-error" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-medium text-red-700"></div>
+
+            <form id="login-form" class="space-y-4">
+              <div>
+                <label for="login-username" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Username
+                </label>
+                <input
+                  id="login-username"
+                  name="username"
+                  type="text"
+                  required
+                  autocomplete="username"
+                  placeholder="Masukkan username..."
+                  class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-emerald-600"
+                />
+              </div>
+
+              <div>
+                <label for="login-password" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Password
+                </label>
+                <input
+                  id="login-password"
+                  name="password"
+                  type="password"
+                  required
+                  autocomplete="current-password"
+                  placeholder="Masukkan password..."
+                  class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-emerald-600"
+                />
+              </div>
+
+              <button
+                id="login-submit-btn"
+                type="submit"
+                class="w-full py-3 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-emerald-600 cursor-pointer"
+              >
+                Masuk ke Dashboard
+              </button>
+            </form>
+          </div>
+        </main>
+
+        <script is:inline>
+          const loginForm = document.getElementById('login-form');
+          const loginError = document.getElementById('login-error');
+          const loginBtn = document.getElementById('login-submit-btn');
+
+          loginForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            loginError.classList.add('hidden');
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Memverifikasi...';
+
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
+
+            try {
+              const res = await fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+              });
+              const data = await res.json();
+
+              if (!res.ok) {
+                throw new Error(data.error || 'Login gagal. Periksa kembali kredensial Anda.');
+              }
+
+              sessionStorage.setItem('admin_pwd', password);
+              window.location.reload();
+            } catch (err) {
+              loginError.textContent = err.message;
+              loginError.classList.remove('hidden');
+            } finally {
+              loginBtn.disabled = false;
+              loginBtn.textContent = 'Masuk ke Dashboard';
+            }
+          });
+        </script>
+      </>
+    ) : (
+      <>
+        <header class="border-b border-slate-200 bg-white sticky top-0 z-40">
+          <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <a href="/" class="w-9 h-9 rounded-xl bg-slate-900 text-white font-bold text-sm flex items-center justify-center">
+                MA
+              </a>
+              <div>
+                <span class="font-bold text-slate-900 text-sm block leading-tight">Portfolio CMS Dashboard</span>
+                <span class="text-[11px] text-emerald-600 font-medium">Terautentikasi sebagai {validUser}</span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+              <a href="/" target="_blank" class="text-xs font-semibold text-slate-600 hover:text-emerald-600">
+                Lihat Website ↗
+              </a>
+              <button
+                id="logout-btn"
+                type="button"
+                class="px-3.5 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-red-50 hover:text-red-600 hover:border-red-200 cursor-pointer"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <main class="max-w-6xl mx-auto px-6 py-10 space-y-12">
+          <!-- BAGIAN 1: FORM & DAFTAR CASE STUDIES -->
+          <section class="grid lg:grid-cols-12 gap-8 items-start">
+            <form id="study-form" class="lg:col-span-7 p-6 md:p-8 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-5">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                <h2 class="text-lg font-bold text-slate-900">Tambah / Edit Case Study</h2>
+                <button type="button" id="reset-study-btn" class="text-xs font-semibold text-slate-500 hover:text-slate-900">
+                  Reset Form
+                </button>
+              </div>
+
+              <input type="hidden" id="study-id" />
+
+              <div class="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Judul Studi Kasus *</label>
+                  <input id="study-title" type="text" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Slug URL *</label>
+                  <input id="study-slug" type="text" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm bg-slate-50" />
+                </div>
+              </div>
+
+              <div class="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Tautkan ke Focused Career</label>
+                  <select id="study-career-id" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm bg-white">
+                    <option value="">-- Tanpa Karier Spesifik --</option>
+                    {careers.map((c: any) => (
+                      <option value={c.id}>{c.company} ({c.role})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Kategori (Pisahkan dengan koma)</label>
+                  <input id="study-categories" type="text" placeholder="Meta Ads, Web Development, SEO" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Live URL Proyek (Opsional)</label>
+                <input id="study-live-url" type="url" placeholder="https://..." class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Ringkasan Singkat / Subtitle</label>
+                <textarea id="study-subtitle" rows="2" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">01 • Tantangan &amp; Latar Belakang</label>
+                <textarea id="study-challenge" rows="3" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">02 • Penjabaran Pekerjaan (1 baris = 1 poin)</label>
+                <textarea id="study-execution" rows="4" placeholder="Tulis 1 poin per baris..." class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">03 • Dampak &amp; Hasil Pekerjaan (1 baris = 1 poin)</label>
+                <textarea id="study-results" rows="4" placeholder="Tulis 1 poin per baris..." class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
+              </div>
+
+              <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                <label class="block text-xs font-bold text-slate-800">Galeri Visual / Mockup (Vercel Blob)</label>
+                <input id="study-photos-file" type="file" accept="image/*" multiple class="text-xs text-slate-600" />
+                <div id="existing-photos-preview" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+              </div>
+
+              <button
+                type="submit"
+                id="save-study-btn"
+                class="w-full py-3 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-emerald-600 cursor-pointer"
+              >
+                Simpan Case Study ke Neon
+              </button>
+            </form>
+
+            <!-- Daftar Case Studies -->
+            <div class="lg:col-span-5 space-y-4">
+              <h2 class="text-lg font-bold text-slate-900">Daftar Case Studies ({studies.length})</h2>
+              <div class="space-y-3">
+                {studies.map((s: any) => (
+                  <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
+                    <div class="text-xs text-emerald-600 font-mono">/{s.slug}</div>
+                    <div class="font-bold text-sm text-slate-900">{s.title}</div>
+                    <div class="flex items-center gap-3 pt-2 border-t border-slate-100">
+                      <button
+                        type="button"
+                        class="edit-study-btn text-xs font-semibold text-slate-800 hover:text-emerald-600"
+                        data-study={JSON.stringify(s)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        class="delete-study-btn text-xs font-semibold text-red-600 hover:underline"
+                        data-id={s.id}
+                      >
+                        Hapus
+                      </button>
+                      <a href={`/study/${s.slug}`} target="_blank" class="text-xs text-slate-500 hover:text-slate-900 ml-auto">
+                        Buka ↗
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <!-- BAGIAN 2: FORM & DAFTAR FOCUSED CAREER -->
+          <section class="grid lg:grid-cols-12 gap-8 items-start pt-8 border-t border-slate-200">
+            <form id="career-form" class="lg:col-span-7 p-6 md:p-8 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                <h2 class="text-lg font-bold text-slate-900">Tambah / Edit Focused Career</h2>
+                <button type="button" id="reset-career-btn" class="text-xs font-semibold text-slate-500 hover:text-slate-900">
+                  Reset Form
+                </button>
+              </div>
+
+              <input type="hidden" id="career-id" />
+
+              <div class="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Perusahaan / Entitas *</label>
+                  <input id="career-company" type="text" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Jabatan / Role *</label>
+                  <input id="career-role" type="text" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+                </div>
+              </div>
+
+              <div class="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Periode *</label>
+                  <input id="career-period" type="text" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Urutan Tampil</label>
+                  <input id="career-sort" type="number" value="1" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Ringkasan Peran</label>
+                <textarea id="career-summary" rows="3" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Key Milestones (1 baris = 1 poin)</label>
+                <textarea id="career-milestones" rows="4" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm"></textarea>
+              </div>
+
+              <button type="submit" class="w-full py-3 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-emerald-600 cursor-pointer">
+                Simpan Focused Career ke Neon
+              </button>
+            </form>
+
+            <div class="lg:col-span-5 space-y-4">
+              <h2 class="text-lg font-bold text-slate-900">Daftar Focused Career ({careers.length})</h2>
+              <div class="space-y-3">
+                {careers.map((c: any) => (
+                  <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
+                    <div class="text-xs text-emerald-600 font-semibold">{c.period}</div>
+                    <div class="font-bold text-sm text-slate-900">{c.company}</div>
+                    <div class="text-xs text-slate-600">{c.role}</div>
+                    <div class="flex items-center gap-3 pt-2 border-t border-slate-100">
+                      <button
+                        type="button"
+                        class="edit-career-btn text-xs font-semibold text-slate-800 hover:text-emerald-600"
+                        data-career={JSON.stringify(c)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        class="delete-career-btn text-xs font-semibold text-red-600 hover:underline"
+                        data-id={c.id}
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </main>
+
+        <script is:inline>
+          document.getElementById('logout-btn')?.addEventListener('click', async () => {
+            sessionStorage.removeItem('admin_pwd');
+            await fetch('/api/auth', { method: 'DELETE' });
+            window.location.reload();
+          });
+
+          function toCleanSlug(text) {
+            return (text || '')
+              .toLowerCase()
+              .trim()
+              .replace(/[^a-z0-9\s-]/g, '')
+              .replace(/\s+/g, '-')
+              .replace(/-+/g, '-');
+          }
+
+          function linesToArray(text) {
+            return (text || '')
+              .replace(/\.([A-Z])/g, '.\n$1')
+              .split(/\r?\n+/)
+              .map((line) => line.replace(/^[\s•\-\*\u2022\u25CF]+/, '').trim())
+              .filter(Boolean);
+          }
+
+          ['study-execution', 'study-results', 'career-milestones'].forEach((id) => {
+            const ta = document.getElementById(id);
+            ta?.addEventListener('paste', () => {
+              setTimeout(() => {
+                ta.value = linesToArray(ta.value).join('\n');
+              }, 10);
+            });
+          });
+
+          const studyTitleInput = document.getElementById('study-title');
+          const studySlugInput = document.getElementById('study-slug');
+          studyTitleInput?.addEventListener('input', () => {
+            if (!studySlugInput.dataset.manual) {
+              studySlugInput.value = toCleanSlug(studyTitleInput.value);
+            }
+          });
+          studySlugInput?.addEventListener('input', () => {
+            studySlugInput.dataset.manual = 'true';
+          });
+          studySlugInput?.addEventListener('blur', () => {
+            studySlugInput.value = toCleanSlug(studySlugInput.value);
+          });
+
+          let currentPhotos = [];
+          const photosPreview = document.getElementById('existing-photos-preview');
+
+          function renderPhotosPreview() {
+            photosPreview.innerHTML = '';
+            currentPhotos.forEach((p, idx) => {
+              const box = document.createElement('div');
+              box.className = 'p-2 rounded-lg bg-white border border-slate-200 space-y-1.5';
+              box.innerHTML = `
+                <img src="${p.url}" class="w-full h-20 object-cover rounded" />
+                <input type="text" value="${p.caption || ''}" placeholder="Caption gambar..." class="photo-cap w-full text-[11px] px-2 py-1 border border-slate-200 rounded" data-idx="${idx}" />
+                <button type="button" class="remove-photo text-[11px] text-red-600 font-semibold" data-idx="${idx}">Hapus foto</button>
+              `;
+              photosPreview.appendChild(box);
+            });
+
+            photosPreview.querySelectorAll('.photo-cap').forEach((inp) => {
+              inp.addEventListener('input', (e) => {
+                currentPhotos[Number(e.target.dataset.idx)].caption = e.target.value;
+              });
+            });
+            photosPreview.querySelectorAll('.remove-photo').forEach((btn) => {
+              btn.addEventListener('click', (e) => {
+                currentPhotos.splice(Number(e.target.dataset.idx), 1);
+                renderPhotosPreview();
+              });
+            });
+          }
+
+          function getAuthHeaders(isJson = true) {
+            const pwd = sessionStorage.getItem('admin_pwd') || '';
+            const headers = {};
+            if (pwd) headers['x-admin-password'] = pwd;
+            if (isJson) headers['Content-Type'] = 'application/json';
+            return headers;
+          }
+
+          document.querySelectorAll('.edit-study-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const s = JSON.parse(btn.dataset.study);
+              document.getElementById('study-id').value = s.id;
+              studyTitleInput.value = s.title || '';
+              studySlugInput.value = s.slug || '';
+              studySlugInput.dataset.manual = 'true';
+              document.getElementById('study-career-id').value = s.career_id || '';
+              document.getElementById('study-categories').value = (s.categories || []).join(', ');
+              document.getElementById('study-live-url').value = s.live_url || '';
+              document.getElementById('study-subtitle').value = s.subtitle || '';
+              document.getElementById('study-challenge').value = s.challenge || '';
+              document.getElementById('study-execution').value = Array.isArray(s.execution) ? s.execution.join('\n') : '';
+              document.getElementById('study-results').value = Array.isArray(s.results) ? s.results.join('\n') : '';
+              currentPhotos = Array.isArray(s.photos) ? [...s.photos] : [];
+              renderPhotosPreview();
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+          });
+
+          document.getElementById('reset-study-btn')?.addEventListener('click', () => {
+            document.getElementById('study-form').reset();
+            document.getElementById('study-id').value = '';
+            delete studySlugInput.dataset.manual;
+            currentPhotos = [];
+            renderPhotosPreview();
+          });
+
+          document.getElementById('study-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const saveBtn = document.getElementById('save-study-btn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Menyimpan...';
+
+            try {
+              const fileInput = document.getElementById('study-photos-file');
+              if (fileInput.files && fileInput.files.length > 0) {
+                for (const file of fileInput.files) {
+                  const fd = new FormData();
+                  fd.append('file', file);
+                  const upRes = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: getAuthHeaders(false),
+                    body: fd,
+                  });
+                  const upData = await upRes.json();
+                  if (!upRes.ok) throw new Error(upData.error || 'Gagal mengunggah gambar');
+                  currentPhotos.push({ url: upData.url, caption: '' });
+                }
+              }
+
+              const payload = {
+                id: document.getElementById('study-id').value || null,
+                career_id: document.getElementById('study-career-id').value || null,
+                title: studyTitleInput.value.trim(),
+                slug: toCleanSlug(studySlugInput.value),
+                categories: document.getElementById('study-categories').value.split(',').map((c) => c.trim()).filter(Boolean),
+                live_url: document.getElementById('study-live-url').value.trim(),
+                subtitle: document.getElementById('study-subtitle').value.trim(),
+                challenge: document.getElementById('study-challenge').value.trim(),
+                execution: linesToArray(document.getElementById('study-execution').value),
+                results: linesToArray(document.getElementById('study-results').value),
+                photos: currentPhotos,
+              };
+
+              const res = await fetch('/api/studies', {
+                method: 'POST',
+                headers: getAuthHeaders(true),
+                body: JSON.stringify(payload),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || 'Gagal menyimpan studi kasus');
+
+              alert('Case Study berhasil disimpan!');
+              window.location.reload();
+            } catch (err) {
+              alert(err.message);
+            } finally {
+              saveBtn.disabled = false;
+              saveBtn.textContent = 'Simpan Case Study ke Neon';
+            }
+          });
+
+          document.querySelectorAll('.delete-study-btn').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+              if (!confirm('Hapus studi kasus ini secara permanen?')) return;
+              const res = await fetch('/api/studies', {
+                method: 'DELETE',
+                headers: getAuthHeaders(true),
+                body: JSON.stringify({ id: btn.dataset.id }),
+              });
+              if (res.ok) window.location.reload();
+              else alert('Gagal menghapus studi kasus');
+            });
+          });
+
+          document.querySelectorAll('.edit-career-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const c = JSON.parse(btn.dataset.career);
+              document.getElementById('career-id').value = c.id;
+              document.getElementById('career-company').value = c.company || '';
+              document.getElementById('career-role').value = c.role || '';
+              document.getElementById('career-period').value = c.period || '';
+              document.getElementById('career-sort').value = c.sort_order ?? 1;
+              document.getElementById('career-summary').value = c.summary || '';
+              document.getElementById('career-milestones').value = Array.isArray(c.milestones) ? c.milestones.join('\n') : '';
+              document.getElementById('career-form').scrollIntoView({ behavior: 'smooth' });
+            });
+          });
+
+          document.getElementById('reset-career-btn')?.addEventListener('click', () => {
+            document.getElementById('career-form').reset();
+            document.getElementById('career-id').value = '';
+          });
+
+          document.getElementById('career-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+              id: document.getElementById('career-id').value || null,
+              company: document.getElementById('career-company').value.trim(),
+              role: document.getElementById('career-role').value.trim(),
+              period: document.getElementById('career-period').value.trim(),
+              sort_order: Number(document.getElementById('career-sort').value || 1),
+              summary: document.getElementById('career-summary').value.trim(),
+              milestones: linesToArray(document.getElementById('career-milestones').value),
+            };
+
+            const res = await fetch('/api/careers', {
+              method: 'POST',
+              headers: getAuthHeaders(true),
+              body: JSON.stringify(payload),
+            });
+            if (res.ok) {
+              alert('Focused Career berhasil disimpan!');
+              window.location.reload();
+            } else {
+              const data = await res.json();
+              alert(data.error || 'Gagal menyimpan karier');
+            }
+          });
+
+          document.querySelectorAll('.delete-career-btn').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+              if (!confirm('Hapus karier ini?')) return;
+              const res = await fetch('/api/careers', {
+                method: 'DELETE',
+                headers: getAuthHeaders(true),
+                body: JSON.stringify({ id: btn.dataset.id }),
+              });
+              if (res.ok) window.location.reload();
+              else alert('Gagal menghapus karier');
+            });
+          });
+        </script>
+      </>
+    )}
+  </body>
+</html>
