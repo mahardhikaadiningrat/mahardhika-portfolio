@@ -225,7 +225,7 @@ const studies = isAuthenticated
               </div>
 
               <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                <label class="block text-xs font-bold text-slate-800">Galeri Visual / Mockup (Vercel Blob)</label>
+                <label class="block text-xs font-bold text-slate-800">Galeri Visual / Mockup (Vercel Blob — Bisa Banyak Gambar / Slider)</label>
                 <input id="study-photos-file" type="file" accept="image/*" multiple class="text-xs text-slate-600" />
                 <div id="existing-photos-preview" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
               </div>
@@ -406,11 +406,22 @@ const studies = isAuthenticated
             photosPreview.innerHTML = '';
             currentPhotos.forEach((p, idx) => {
               const box = document.createElement('div');
-              box.className = 'p-2 rounded-lg bg-white border border-slate-200 space-y-1.5';
+              box.className = 'p-2.5 rounded-xl bg-white border border-slate-200 space-y-2';
               box.innerHTML = `
-                <img src="${p.url}" class="w-full h-20 object-cover rounded" />
-                <input type="text" value="${p.caption || ''}" placeholder="Caption gambar..." class="photo-cap w-full text-[11px] px-2 py-1 border border-slate-200 rounded" data-idx="${idx}" />
-                <button type="button" class="remove-photo text-[11px] text-red-600 font-semibold" data-idx="${idx}">Hapus foto</button>
+                <div class="relative">
+                  <img src="${p.url}" class="w-full h-24 object-cover rounded-lg" />
+                  <span class="absolute top-1.5 left-1.5 text-[10px] font-bold px-2 py-0.5 rounded bg-slate-900/85 text-white">
+                    Slide #${idx + 1}
+                  </span>
+                </div>
+                <input type="text" value="${p.caption || ''}" placeholder="Caption slide ${idx + 1}..." class="photo-cap w-full text-[11px] px-2 py-1 border border-slate-200 rounded" data-idx="${idx}" />
+                <div class="flex items-center justify-between pt-0.5">
+                  <div class="flex items-center gap-1">
+                    <button type="button" class="move-left px-2 py-0.5 text-[11px] font-bold rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-40 cursor-pointer" data-idx="${idx}" ${idx === 0 ? 'disabled' : ''}>←</button>
+                    <button type="button" class="move-right px-2 py-0.5 text-[11px] font-bold rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-40 cursor-pointer" data-idx="${idx}" ${idx === currentPhotos.length - 1 ? 'disabled' : ''}>→</button>
+                  </div>
+                  <button type="button" class="remove-photo text-[11px] text-red-600 font-semibold cursor-pointer" data-idx="${idx}">Hapus</button>
+                </div>
               `;
               photosPreview.appendChild(box);
             });
@@ -418,6 +429,24 @@ const studies = isAuthenticated
             photosPreview.querySelectorAll('.photo-cap').forEach((inp) => {
               inp.addEventListener('input', (e) => {
                 currentPhotos[Number(e.target.dataset.idx)].caption = e.target.value;
+              });
+            });
+            photosPreview.querySelectorAll('.move-left').forEach((btn) => {
+              btn.addEventListener('click', (e) => {
+                const i = Number(e.target.dataset.idx);
+                if (i > 0) {
+                  [currentPhotos[i - 1], currentPhotos[i]] = [currentPhotos[i], currentPhotos[i - 1]];
+                  renderPhotosPreview();
+                }
+              });
+            });
+            photosPreview.querySelectorAll('.move-right').forEach((btn) => {
+              btn.addEventListener('click', (e) => {
+                const i = Number(e.target.dataset.idx);
+                if (i < currentPhotos.length - 1) {
+                  [currentPhotos[i + 1], currentPhotos[i]] = [currentPhotos[i], currentPhotos[i + 1]];
+                  renderPhotosPreview();
+                }
               });
             });
             photosPreview.querySelectorAll('.remove-photo').forEach((btn) => {

@@ -67,6 +67,7 @@ const t = {
   backPortfolio: isEn ? '← Back to Portfolio' : '← Kembali ke Portfolio',
   visitLive: isEn ? 'Visit Live Website / Project' : 'Kunjungi Website / Proyek Live',
   visualHeading: isEn ? 'Visuals & Project Documentation' : 'Visual & Dokumentasi Proyek',
+  zoomHint: isEn ? 'Click image to enlarge' : 'Klik gambar untuk memperbesar',
   secChallenge: isEn ? '01 • Challenge & Background' : '01 • Tantangan & Latar Belakang',
   secExecution: isEn ? '02 • Execution & Scope of Work' : '02 • Penjabaran Pekerjaan',
   secResults: isEn ? '03 • Impact & Results' : '03 • Dampak & Hasil Pekerjaan',
@@ -241,26 +242,112 @@ const t = {
         )}
       </section>
 
-      <!-- Galeri Foto / Mockup -->
+      <!-- Galeri Slider / Carousel + Lightbox -->
       {photos.length > 0 && (
         <section class="reveal-section space-y-4">
-          <h2 class="reveal-header text-lg font-bold text-slate-900">{t.visualHeading}</h2>
-          <div class={`grid gap-5 ${photos.length > 1 ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
-            {photos.map((photo) => (
-              <figure class="reveal-card gsap-hover-card rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-xs">
-                <img
-                  src={photo.url}
-                  alt={photo.caption || study.title}
-                  loading="lazy"
-                  class="w-full h-auto object-cover"
-                />
-                {photo.caption && (
-                  <figcaption class="px-4 py-3 text-xs text-slate-600 border-t border-slate-100 bg-white">
-                    {photo.caption}
-                  </figcaption>
-                )}
-              </figure>
-            ))}
+          <div class="reveal-header flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5">
+              <h2 class="text-lg font-bold text-slate-900">{t.visualHeading}</h2>
+              {photos.length > 1 && (
+                <span id="slider-counter" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-900 text-white">
+                  1 / {photos.length}
+                </span>
+              )}
+            </div>
+            <span class="text-xs text-slate-500">{t.zoomHint}</span>
+          </div>
+
+          <div
+            id="study-slider"
+            class="reveal-card relative rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-xs select-none"
+          >
+            <!-- Viewport & Track -->
+            <div class="overflow-hidden bg-slate-100">
+              <div
+                id="slider-track"
+                class="flex transition-transform duration-500 ease-out"
+                style="transform: translateX(0%);"
+              >
+                {photos.map((photo, idx) => (
+                  <div class="w-full shrink-0 flex flex-col">
+                    <div class="relative w-full aspect-16/10 bg-slate-100 flex items-center justify-center overflow-hidden group">
+                      <img
+                        src={photo.url}
+                        alt={photo.caption || `${study.title} — ${idx + 1}`}
+                        loading={idx === 0 ? 'eager' : 'lazy'}
+                        data-lightbox-src={photo.url}
+                        data-lightbox-caption={photo.caption || ''}
+                        data-slide-idx={idx}
+                        class="lightbox-trigger w-full h-full object-contain cursor-zoom-in transition-transform duration-300 group-hover:scale-[1.01]"
+                      />
+                    </div>
+                    {photo.caption && (
+                      <div class="px-5 py-3.5 text-xs md:text-sm text-slate-600 border-t border-slate-100 bg-white leading-relaxed">
+                        {photo.caption}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <!-- Tombol Navigasi Prev / Next (tampil jika gambar > 1) -->
+            {photos.length > 1 && (
+              <>
+                <button
+                  id="slider-prev"
+                  type="button"
+                  aria-label="Previous image"
+                  class="absolute left-3 top-[42%] -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/95 hover:bg-slate-900 text-slate-900 hover:text-white border border-slate-200 shadow-md flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+
+                <button
+                  id="slider-next"
+                  type="button"
+                  aria-label="Next image"
+                  class="absolute right-3 top-[42%] -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/95 hover:bg-slate-900 text-slate-900 hover:text-white border border-slate-200 shadow-md flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+
+                <!-- Pagination Dots + Thumbnail Strip -->
+                <div class="px-5 py-3 bg-slate-50/90 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                  <div class="flex items-center gap-2 overflow-x-auto py-0.5">
+                    {photos.map((photo, idx) => (
+                      <button
+                        type="button"
+                        data-goto={idx}
+                        aria-label={`Slide ${idx + 1}`}
+                        class={`slider-thumb relative w-14 h-9 rounded-lg overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
+                          idx === 0 ? 'border-emerald-600 opacity-100 scale-105' : 'border-transparent opacity-60 hover:opacity-100'
+                        }`}
+                      >
+                        <img src={photo.url} alt="" class="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+
+                  <div class="flex items-center gap-1.5">
+                    {photos.map((_, idx) => (
+                      <button
+                        type="button"
+                        data-goto={idx}
+                        aria-label={`Go to slide ${idx + 1}`}
+                        class={`slider-dot h-2 rounded-full transition-all cursor-pointer ${
+                          idx === 0 ? 'w-6 bg-emerald-600' : 'w-2 bg-slate-300 hover:bg-slate-400'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </section>
       )}
@@ -335,6 +422,35 @@ const t = {
       </section>
     </main>
 
+    <!-- Lightbox Modal Layar Penuh -->
+    <div
+      id="lightbox-modal"
+      class="fixed inset-0 z-50 hidden bg-slate-950/90 backdrop-blur-xs flex items-center justify-center p-4 md:p-8"
+      role="dialog"
+      aria-modal="true"
+    >
+      <button
+        id="lightbox-close"
+        type="button"
+        aria-label="Close fullscreen preview"
+        class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/15 hover:bg-white/30 text-white flex items-center justify-center cursor-pointer"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      <div class="max-w-5xl w-full flex flex-col items-center gap-3">
+        <img
+          id="lightbox-img"
+          src=""
+          alt=""
+          class="max-h-[80vh] w-auto rounded-xl shadow-2xl border border-white/10 object-contain"
+        />
+        <p id="lightbox-caption" class="text-xs md:text-sm text-slate-200 text-center max-w-2xl"></p>
+      </div>
+    </div>
+
     <footer class="border-t border-slate-200 bg-white mt-12">
       <div class="max-w-6xl mx-auto px-6 py-6 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500">
         <span>© {new Date().getFullYear()} Mahardhika Adiningrat. All rights reserved.</span>
@@ -391,20 +507,122 @@ const t = {
         }
       });
 
-      document.querySelectorAll('.gsap-hover-card').forEach((card) => {
-        card.addEventListener('mouseenter', () => {
-          gsap.to(card, { y: -4, boxShadow: '0 12px 24px -8px rgba(15, 23, 42, 0.08)', duration: 0.35, ease: 'power3.out' });
-        });
-        card.addEventListener('mouseleave', () => {
-          gsap.to(card, { y: 0, boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', duration: 0.35, ease: 'power3.out' });
-        });
-      });
-
       document.querySelectorAll('.gsap-btn').forEach((btn) => {
         btn.addEventListener('mouseenter', () => gsap.to(btn, { y: -2, scale: 1.02, duration: 0.25, ease: 'power3.out' }));
         btn.addEventListener('mouseleave', () => gsap.to(btn, { y: 0, scale: 1, duration: 0.25, ease: 'power3.out' }));
       });
 
+      // --- Logika Slider / Carousel ---
+      const sliderTrack = document.getElementById('slider-track') as HTMLElement | null;
+      const sliderEl = document.getElementById('study-slider');
+      const prevBtn = document.getElementById('slider-prev');
+      const nextBtn = document.getElementById('slider-next');
+      const counterEl = document.getElementById('slider-counter');
+      const dots = Array.from(document.querySelectorAll('.slider-dot'));
+      const thumbs = Array.from(document.querySelectorAll('.slider-thumb'));
+      const totalSlides = sliderTrack ? sliderTrack.children.length : 0;
+      let currentSlide = 0;
+
+      function goToSlide(index: number) {
+        if (!sliderTrack || totalSlides <= 1) return;
+        currentSlide = (index + totalSlides) % totalSlides;
+        sliderTrack.style.transform = `translateX(-${currentSlide * 100}%)`;
+
+        if (counterEl) {
+          counterEl.textContent = `${currentSlide + 1} / ${totalSlides}`;
+        }
+
+        dots.forEach((dot, i) => {
+          dot.className = `slider-dot h-2 rounded-full transition-all cursor-pointer ${
+            i === currentSlide ? 'w-6 bg-emerald-600' : 'w-2 bg-slate-300 hover:bg-slate-400'
+          }`;
+        });
+
+        thumbs.forEach((thumb, i) => {
+          thumb.className = `slider-thumb relative w-14 h-9 rounded-lg overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
+            i === currentSlide
+              ? 'border-emerald-600 opacity-100 scale-105'
+              : 'border-transparent opacity-60 hover:opacity-100'
+          }`;
+        });
+      }
+
+      prevBtn?.addEventListener('click', () => goToSlide(currentSlide - 1));
+      nextBtn?.addEventListener('click', () => goToSlide(currentSlide + 1));
+
+      document.querySelectorAll('[data-goto]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const target = Number(btn.getAttribute('data-goto'));
+          if (!Number.isNaN(target)) goToSlide(target);
+        });
+      });
+
+      // Dukungan Swipe di HP / Touchscreen
+      let touchStartX = 0;
+      sliderEl?.addEventListener(
+        'touchstart',
+        (e) => {
+          touchStartX = e.changedTouches[0].clientX;
+        },
+        { passive: true }
+      );
+      sliderEl?.addEventListener(
+        'touchend',
+        (e) => {
+          const deltaX = e.changedTouches[0].clientX - touchStartX;
+          if (Math.abs(deltaX) > 45) {
+            goToSlide(deltaX < 0 ? currentSlide + 1 : currentSlide - 1);
+          }
+        },
+        { passive: true }
+      );
+
+      // --- Logika Lightbox Zoom ---
+      const lightboxModal = document.getElementById('lightbox-modal');
+      const lightboxImg = document.getElementById('lightbox-img') as HTMLImageElement | null;
+      const lightboxCaption = document.getElementById('lightbox-caption');
+      const lightboxClose = document.getElementById('lightbox-close');
+
+      function openLightbox(src: string, caption: string) {
+        if (!lightboxModal || !lightboxImg) return;
+        lightboxImg.src = src;
+        if (lightboxCaption) lightboxCaption.textContent = caption || '';
+        lightboxModal.classList.remove('hidden');
+        lenis.stop();
+      }
+
+      function closeLightbox() {
+        if (!lightboxModal) return;
+        lightboxModal.classList.add('hidden');
+        lenis.start();
+      }
+
+      document.querySelectorAll('.lightbox-trigger').forEach((img) => {
+        img.addEventListener('click', () => {
+          const src = img.getAttribute('data-lightbox-src') || '';
+          const caption = img.getAttribute('data-lightbox-caption') || '';
+          if (src) openLightbox(src, caption);
+        });
+      });
+
+      lightboxClose?.addEventListener('click', closeLightbox);
+      lightboxModal?.addEventListener('click', (e) => {
+        if (e.target === lightboxModal) closeLightbox();
+      });
+
+      // Navigasi Keyboard (Panah Kiri/Kanan & Escape)
+      window.addEventListener('keydown', (e) => {
+        if (lightboxModal && !lightboxModal.classList.contains('hidden')) {
+          if (e.key === 'Escape') closeLightbox();
+          return;
+        }
+        if (totalSlides > 1) {
+          if (e.key === 'ArrowLeft') goToSlide(currentSlide - 1);
+          if (e.key === 'ArrowRight') goToSlide(currentSlide + 1);
+        }
+      });
+
+      // Mobile Menu
       const menuBtn = document.getElementById('mobile-menu-btn');
       const mobileMenu = document.getElementById('mobile-menu');
       const iconHamburger = document.getElementById('icon-hamburger');
