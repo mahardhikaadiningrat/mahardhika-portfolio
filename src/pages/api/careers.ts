@@ -46,7 +46,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           period = ${period},
           sort_order = ${orderNum},
           summary = ${summary || ''},
-          milestones = ${cleanMilestones}
+          milestones = ${cleanMilestones},
+          en_data = NULL
         WHERE id = ${id}
       `;
     } else {

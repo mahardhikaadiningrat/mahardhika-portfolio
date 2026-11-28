@@ -1,23 +1,33 @@
 ---
 import '../../styles/global.css';
 import { sql } from '../../lib/db';
+import { getActiveLang, getTranslatedStudy, getTranslatedCareer } from '../../lib/translator';
 
 export const prerender = false;
+
+const lang = getActiveLang(Astro.url, Astro.cookies);
+const isEn = lang === 'en';
 
 const { slug } = Astro.params;
 const decodedSlug = decodeURIComponent(slug || '');
 
 const rows = await sql`SELECT * FROM case_studies WHERE slug = ${decodedSlug} LIMIT 1`;
-const study = rows[0];
+const rawStudy = rows[0];
 
-if (!study) {
-  return Astro.redirect('/');
+if (!rawStudy) {
+  return Astro.redirect(`/?lang=${lang}`);
 }
+
+const study = isEn ? await getTranslatedStudy(rawStudy) : rawStudy;
 
 const careerRows = study.career_id
   ? await sql`SELECT * FROM careers WHERE id = ${study.career_id} LIMIT 1`
   : [];
-const career = careerRows[0];
+const career = careerRows[0]
+  ? isEn
+    ? await getTranslatedCareer(careerRows[0])
+    : careerRows[0]
+  : null;
 
 function parseBulletPoints(raw: unknown): string[] {
   const list = Array.isArray(raw) ? raw : typeof raw === 'string' ? [raw] : [];
@@ -27,11 +37,9 @@ function parseBulletPoints(raw: unknown): string[] {
     const text = String(item || '').trim();
     if (!text) continue;
 
-    // 1. Pecah berdasarkan baris baru (\n) terlebih dahulu
     const lines = text.split(/\r?\n+/);
 
     for (const line of lines) {
-      // 2. Pisahkan titik yang langsung diikuti huruf kapital (contoh: "...target.Menjaga...")
       const separated = line.replace(/\.([A-Z])/g, '.\n$1').split('\n');
       for (const part of separated) {
         const cleaned = part.replace(/^[\s•\-\*\u2022\u25CF\d\.]+/, '').trim();
@@ -49,9 +57,29 @@ const photos: { url: string; caption?: string }[] = Array.isArray(study.photos)
 const execution: string[] = parseBulletPoints(study.execution);
 const results: string[] = parseBulletPoints(study.results);
 const categories: string[] = Array.isArray(study.categories) ? study.categories : [];
+
+const t = {
+  navCareers: isEn ? 'Focused Career' : 'Fokus Karier',
+  navStudies: isEn ? 'Selected Case Studies' : 'Studi Kasus Pilihan',
+  footerStudies: isEn ? 'Case Studies' : 'Studi Kasus',
+  navContact: isEn ? 'Contact' : 'Kontak',
+  navLinkedin: isEn ? 'Connect on LinkedIn' : 'Connect ke LinkedIn',
+  backPortfolio: isEn ? '← Back to Portfolio' : '← Kembali ke Portfolio',
+  visitLive: isEn ? 'Visit Live Website / Project' : 'Kunjungi Website / Proyek Live',
+  visualHeading: isEn ? 'Visuals & Project Documentation' : 'Visual & Dokumentasi Proyek',
+  secChallenge: isEn ? '01 • Challenge & Background' : '01 • Tantangan & Latar Belakang',
+  secExecution: isEn ? '02 • Execution & Scope of Work' : '02 • Penjabaran Pekerjaan',
+  secResults: isEn ? '03 • Impact & Results' : '03 • Dampak & Hasil Pekerjaan',
+  ctaTitle: isEn ? 'Interested in discussing a similar case study?' : 'Tertarik mendiskusikan studi kasus serupa?',
+  ctaDesc: isEn
+    ? 'Reach out directly for marketing strategy or digital system development consultations.'
+    : 'Hubungi langsung untuk konsultasi strategi pemasaran atau pengembangan sistem digital.',
+  ctaEmail: isEn ? 'Send Email →' : 'Kirim Email →',
+  ctaMore: isEn ? 'More Case Studies' : 'Studi Kasus Lainnya',
+};
 ---
 
-<html lang="id">
+<html lang={lang}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -65,7 +93,7 @@ const categories: string[] = Array.isArray(study.categories) ? study.categories 
   <body class="bg-slate-50 text-slate-900 antialiased">
     <header class="border-b border-slate-200 bg-white/95 backdrop-blur sticky top-0 z-40">
       <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <a href="/" class="gsap-logo inline-flex items-center gap-2.5 group" aria-label="Mahardhika Adiningrat Home">
+        <a href={`/?lang=${lang}`} class="gsap-logo inline-flex items-center gap-2.5 group" aria-label="Mahardhika Adiningrat Home">
           <span class="w-9 h-9 rounded-xl bg-slate-900 text-white font-bold text-sm tracking-wider flex items-center justify-center shadow-xs group-hover:bg-emerald-600">
             MA
           </span>
@@ -73,59 +101,92 @@ const categories: string[] = Array.isArray(study.categories) ? study.categories 
 
         <!-- Desktop Navigation -->
         <nav class="hidden md:flex items-center gap-6 text-sm">
-          <a href="/#careers" class="gsap-nav text-slate-600 hover:text-slate-900 font-medium">Focused Career</a>
-          <a href="/#studies" class="gsap-nav text-slate-600 hover:text-slate-900 font-medium">Selected Case Studies</a>
-          <a href="/#contact" class="gsap-nav text-slate-600 hover:text-slate-900 font-medium">Kontak</a>
+          <a href={`/?lang=${lang}#careers`} class="gsap-nav text-slate-600 hover:text-slate-900 font-medium">{t.navCareers}</a>
+          <a href={`/?lang=${lang}#studies`} class="gsap-nav text-slate-600 hover:text-slate-900 font-medium">{t.navStudies}</a>
+          <a href={`/?lang=${lang}#contact`} class="gsap-nav text-slate-600 hover:text-slate-900 font-medium">{t.navContact}</a>
+
+          <!-- Language Switcher Desktop -->
+          <div class="gsap-nav inline-flex items-center rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-xs font-bold">
+            <a
+              href={`/study/${encodeURIComponent(decodedSlug)}?lang=id`}
+              class={`px-2 py-1 rounded-md transition-colors ${!isEn ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-900'}`}
+            >
+              ID
+            </a>
+            <a
+              href={`/study/${encodeURIComponent(decodedSlug)}?lang=en`}
+              class={`px-2 py-1 rounded-md transition-colors ${isEn ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-900'}`}
+            >
+              EN
+            </a>
+          </div>
+
           <a
-            href="https://www.linkedin.com/in/mahardhika-adiningrat/"
+            href="https://www.linkedin.com/in/mahardhikaadiningrat/"
             target="_blank"
             rel="noopener noreferrer"
             class="gsap-nav gsap-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-900 text-white font-semibold hover:bg-emerald-600"
           >
-            <span>Connect ke LinkedIn</span>
+            <span>{t.navLinkedin}</span>
             <span class="text-xs">↗</span>
           </a>
         </nav>
 
-        <!-- Mobile Hamburger Button -->
-        <button
-          id="mobile-menu-btn"
-          type="button"
-          aria-label="Buka Menu Navigasi"
-          aria-expanded="false"
-          class="md:hidden inline-flex items-center justify-center p-2 rounded-lg text-slate-700 hover:text-slate-900 hover:bg-slate-100"
-        >
-          <svg id="icon-hamburger" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-          <svg id="icon-close" class="w-6 h-6 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <!-- Mobile Controls -->
+        <div class="flex md:hidden items-center gap-2">
+          <div class="inline-flex items-center rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-[11px] font-bold">
+            <a
+              href={`/study/${encodeURIComponent(decodedSlug)}?lang=id`}
+              class={`px-2 py-1 rounded-md ${!isEn ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'}`}
+            >
+              ID
+            </a>
+            <a
+              href={`/study/${encodeURIComponent(decodedSlug)}?lang=en`}
+              class={`px-2 py-1 rounded-md ${isEn ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'}`}
+            >
+              EN
+            </a>
+          </div>
+
+          <button
+            id="mobile-menu-btn"
+            type="button"
+            aria-label="Open Navigation Menu"
+            aria-expanded="false"
+            class="inline-flex items-center justify-center p-2 rounded-lg text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+          >
+            <svg id="icon-hamburger" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <svg id="icon-close" class="w-6 h-6 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <!-- Indikator Progres Gulir Lenis -->
       <div id="scroll-progress" class="h-[2px] bg-emerald-600 origin-left scale-x-0 w-full"></div>
 
       <!-- Mobile Dropdown Menu -->
       <div id="mobile-menu" class="hidden md:hidden border-t border-slate-200 bg-white px-6 py-4 space-y-3 shadow-sm overflow-hidden">
-        <a href="/#careers" class="mobile-nav-link block py-1.5 text-sm font-medium text-slate-700 hover:text-emerald-600">
-          Focused Career
+        <a href={`/?lang=${lang}#careers`} class="mobile-nav-link block py-1.5 text-sm font-medium text-slate-700 hover:text-emerald-600">
+          {t.navCareers}
         </a>
-        <a href="/#studies" class="mobile-nav-link block py-1.5 text-sm font-medium text-slate-700 hover:text-emerald-600">
-          Selected Case Studies
+        <a href={`/?lang=${lang}#studies`} class="mobile-nav-link block py-1.5 text-sm font-medium text-slate-700 hover:text-emerald-600">
+          {t.navStudies}
         </a>
-        <a href="/#contact" class="mobile-nav-link block py-1.5 text-sm font-medium text-slate-700 hover:text-emerald-600">
-          Kontak
+        <a href={`/?lang=${lang}#contact`} class="mobile-nav-link block py-1.5 text-sm font-medium text-slate-700 hover:text-emerald-600">
+          {t.navContact}
         </a>
         <div class="pt-2 border-t border-slate-100">
           <a
-            href="https://www.linkedin.com/in/mahardhika-adiningrat/"
+            href="https://www.linkedin.com/in/mahardhikaadiningrat/"
             target="_blank"
             rel="noopener noreferrer"
             class="mobile-nav-link w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-emerald-600"
           >
-            <span>Connect ke LinkedIn</span>
+            <span>{t.navLinkedin}</span>
             <span class="text-xs">↗</span>
           </a>
         </div>
@@ -136,11 +197,11 @@ const categories: string[] = Array.isArray(study.categories) ? study.categories 
       <!-- Breadcrumb & Header Case Study -->
       <section class="space-y-5">
         <div class="hero-item flex flex-wrap items-center gap-2 text-xs text-slate-500">
-          <a href="/" class="hover:text-slate-900 font-medium">← Kembali ke Portfolio</a>
+          <a href={`/?lang=${lang}`} class="hover:text-slate-900 font-medium">{t.backPortfolio}</a>
           {career && (
             <>
               <span>/</span>
-              <a href={`/career/${career.id}`} class="text-emerald-600 font-semibold hover:underline">
+              <a href={`/career/${career.id}?lang=${lang}`} class="text-emerald-600 font-semibold hover:underline">
                 {career.company}
               </a>
             </>
@@ -173,17 +234,17 @@ const categories: string[] = Array.isArray(study.categories) ? study.categories 
               rel="noopener noreferrer"
               class="gsap-btn inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-emerald-600"
             >
-              <span>Kunjungi Website / Proyek Live</span>
+              <span>{t.visitLive}</span>
               <span>↗</span>
             </a>
           </div>
         )}
       </section>
 
-      <!-- Galeri Foto / Mockup (Jika ada) -->
+      <!-- Galeri Foto / Mockup -->
       {photos.length > 0 && (
         <section class="reveal-section space-y-4">
-          <h2 class="reveal-header text-lg font-bold text-slate-900">Visual &amp; Dokumentasi Proyek</h2>
+          <h2 class="reveal-header text-lg font-bold text-slate-900">{t.visualHeading}</h2>
           <div class={`grid gap-5 ${photos.length > 1 ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
             {photos.map((photo) => (
               <figure class="reveal-card gsap-hover-card rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-xs">
@@ -208,7 +269,7 @@ const categories: string[] = Array.isArray(study.categories) ? study.categories 
       {study.challenge && (
         <section class="reveal-section rounded-2xl bg-white border border-slate-200 p-6 md:p-8 shadow-xs space-y-3">
           <div class="reveal-item text-xs font-bold uppercase tracking-wider text-slate-400">
-            01 • Tantangan &amp; Latar Belakang
+            {t.secChallenge}
           </div>
           <p class="reveal-item text-slate-700 leading-relaxed text-sm md:text-base">
             {study.challenge}
@@ -221,7 +282,7 @@ const categories: string[] = Array.isArray(study.categories) ? study.categories 
         {execution.length > 0 && (
           <section class="reveal-section rounded-2xl bg-white border border-slate-200 p-6 md:p-8 shadow-xs space-y-4">
             <div class="reveal-item text-xs font-bold uppercase tracking-wider text-slate-400">
-              02 • Penjabaran Pekerjaan
+              {t.secExecution}
             </div>
             <ul class="space-y-3">
               {execution.map((item) => (
@@ -237,7 +298,7 @@ const categories: string[] = Array.isArray(study.categories) ? study.categories 
         {results.length > 0 && (
           <section class="reveal-section rounded-2xl bg-emerald-50/60 border border-emerald-200 p-6 md:p-8 shadow-xs space-y-4">
             <div class="reveal-item text-xs font-bold uppercase tracking-wider text-emerald-700">
-              03 • Dampak &amp; Hasil Pekerjaan
+              {t.secResults}
             </div>
             <ul class="space-y-3">
               {results.map((item) => (
@@ -254,21 +315,21 @@ const categories: string[] = Array.isArray(study.categories) ? study.categories 
       <!-- CTA Bawah -->
       <section class="reveal-section rounded-2xl bg-white border border-slate-200 p-6 md:p-8 shadow-xs flex flex-wrap items-center justify-between gap-4">
         <div class="reveal-item space-y-1">
-          <h3 class="text-base font-bold text-slate-900">Tertarik mendiskusikan studi kasus serupa?</h3>
-          <p class="text-xs text-slate-600">Hubungi langsung untuk konsultasi strategi pemasaran atau pengembangan sistem digital.</p>
+          <h3 class="text-base font-bold text-slate-900">{t.ctaTitle}</h3>
+          <p class="text-xs text-slate-600">{t.ctaDesc}</p>
         </div>
         <div class="reveal-item flex flex-wrap items-center gap-3">
           <a
             href="mailto:mahardhikadiningrat@gmail.com"
             class="gsap-btn px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800"
           >
-            Kirim Email →
+            {t.ctaEmail}
           </a>
           <a
-            href="/#studies"
+            href={`/?lang=${lang}#studies`}
             class="gsap-btn px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-xs font-bold hover:bg-slate-200"
           >
-            Studi Kasus Lainnya
+            {t.ctaMore}
           </a>
         </div>
       </section>
@@ -278,10 +339,10 @@ const categories: string[] = Array.isArray(study.categories) ? study.categories 
       <div class="max-w-6xl mx-auto px-6 py-6 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500">
         <span>© {new Date().getFullYear()} Mahardhika Adiningrat. All rights reserved.</span>
         <div class="flex items-center gap-5">
-          <a href="/#careers" class="hover:text-slate-900">Focused Career</a>
-          <a href="/#studies" class="hover:text-slate-900">Case Studies</a>
-          <a href="/#contact" class="hover:text-slate-900">Kontak</a>
-          <a href="https://www.linkedin.com/in/mahardhika-adiningrat/" target="_blank" rel="noopener noreferrer" class="hover:text-slate-900">LinkedIn</a>
+          <a href={`/?lang=${lang}#careers`} class="hover:text-slate-900">{t.navCareers}</a>
+          <a href={`/?lang=${lang}#studies`} class="hover:text-slate-900">{t.footerStudies}</a>
+          <a href={`/?lang=${lang}#contact`} class="hover:text-slate-900">{t.navContact}</a>
+          <a href="https://www.linkedin.com/in/mahardhikaadiningrat/" target="_blank" rel="noopener noreferrer" class="hover:text-slate-900">LinkedIn</a>
         </div>
       </div>
     </footer>
@@ -315,22 +376,12 @@ const categories: string[] = Array.isArray(study.categories) ? study.categories 
         const itemEls = section.querySelectorAll('.reveal-item');
 
         const tl = gsap.timeline({
-          scrollTrigger: {
-            trigger: section,
-            start: 'top 86%',
-            once: true,
-          },
+          scrollTrigger: { trigger: section, start: 'top 86%', once: true },
           defaults: { ease: 'power3.out', duration: 0.65 },
         });
 
         if (headerEls.length) {
-          tl.from(headerEls, {
-            y: 22,
-            clipPath: 'inset(0% 0% 100% 0%)',
-            opacity: 0,
-            stagger: 0.06,
-            clearProps: 'clipPath,transform',
-          });
+          tl.from(headerEls, { y: 22, clipPath: 'inset(0% 0% 100% 0%)', opacity: 0, stagger: 0.06, clearProps: 'clipPath,transform' });
         }
         if (cardEls.length) {
           tl.from(cardEls, { y: 28, scale: 0.96, opacity: 0, stagger: 0.06, clearProps: 'transform' }, headerEls.length ? '-=0.4' : 0);

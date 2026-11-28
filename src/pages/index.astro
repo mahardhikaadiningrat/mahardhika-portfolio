@@ -1,38 +1,85 @@
 ---
 import '../styles/global.css';
 import { sql } from '../lib/db';
+import {
+  getActiveLang,
+  getTranslatedCareersBatch,
+  getTranslatedStudiesBatch,
+} from '../lib/translator';
 
 export const prerender = false;
 
-const careers = await sql`SELECT * FROM careers ORDER BY sort_order ASC`;
-const studies = await sql`SELECT * FROM case_studies ORDER BY created_at DESC`;
+const lang = getActiveLang(Astro.url, Astro.cookies);
+const isEn = lang === 'en';
+
+const rawCareers = await sql`SELECT * FROM careers ORDER BY sort_order ASC`;
+const rawStudies = await sql`SELECT * FROM case_studies ORDER BY created_at DESC`;
+
+const careers = isEn ? await getTranslatedCareersBatch(rawCareers) : rawCareers;
+const studies = isEn ? await getTranslatedStudiesBatch(rawStudies) : rawStudies;
 
 const allCategories: string[] = Array.from(
   new Set(studies.flatMap((s: any) => s.categories || []))
 );
+
+const t = {
+  metaDesc: isEn
+    ? 'Mahardhika Adiningrat Portfolio — Head of Marketing, Full-Stack Digital Marketer & Web Developer based in Bali.'
+    : 'Portfolio Mahardhika Adiningrat — Head of Marketing, Full-Stack Digital Marketer & Web Developer berbasis di Bali.',
+  ogDesc: isEn
+    ? 'Commercial strategy, B2B partnerships, digital marketing & paid ads, custom web development, SEO, and analytics dashboards.'
+    : 'Strategi komersial, kemitraan B2B, digital marketing & iklan online, pengembangan website kustom, SEO, dan dashboard analitik.',
+  navCareers: isEn ? 'Focused Career' : 'Fokus Karier',
+  navStudies: isEn ? 'Selected Case Studies' : 'Studi Kasus Pilihan',
+  footerStudies: isEn ? 'Case Studies' : 'Studi Kasus',
+  navContact: isEn ? 'Contact' : 'Kontak',
+  navLinkedin: isEn ? 'Connect on LinkedIn' : 'Connect ke LinkedIn',
+  heroDesc: isEn
+    ? 'Building end-to-end business growth systems: from commercial strategy, B2B partnerships, and data-driven digital marketing & paid advertising campaigns to custom web development, SEO, and analytics dashboards. Experienced in leading hospital marketing teams while managing digital ecosystems for 10+ brands across healthcare, aesthetics, education, and retail.'
+    : 'Membangun sistem pertumbuhan bisnis dari hulu ke hilir: mulai dari strategi komersial, kemitraan B2B, dan manajemen kampanye digital marketing serta iklan online hingga pengembangan website kustom, SEO, dan dashboard analitik. Berpengalaman memimpin tim marketing rumah sakit sekaligus menangani ekosistem digital lebih dari 10 brand di sektor kesehatan, estetika, edukasi, dan ritel.',
+  statYears: isEn ? 'Years' : 'Tahun',
+  statBrands: isEn ? 'Brands' : 'Brand',
+  careerSub: isEn
+    ? 'Click a career card to explore the portfolio and case studies within each role.'
+    : 'Klik kartu karier untuk melihat daftar portfolio & case study di dalamnya.',
+  careerEmpty: isEn
+    ? 'Neon database is currently empty. Open /admin to populate initial records.'
+    : 'Database Neon masih kosong. Buka halaman /admin untuk mengisi data awal.',
+  careerCta: isEn ? 'View Career & Project Details' : 'Lihat Detail Karier & Proyek',
+  studiesSub: isEn
+    ? 'Filter by discipline and click to open the complete case study.'
+    : 'Filter berdasarkan disiplin keahlian lalu klik untuk membuka detail lengkap.',
+  filterAll: isEn ? 'All' : 'Semua',
+  studyCta: isEn ? 'Open Full Case Study' : 'Buka Studi Kasus Lengkap',
+  ctaBadge: isEn ? 'Collaboration & Consulting' : 'Kolaborasi & Konsultasi',
+  ctaTitle: isEn
+    ? 'Ready to Accelerate Commercial Growth & Your Digital Ecosystem?'
+    : 'Siap Mendorong Pertumbuhan Komersial & Ekosistem Digital Anda?',
+  ctaDesc: isEn
+    ? 'Open for strategic discussions on marketing leadership, B2B partnerships, high-speed custom web development, SEO/GEO, and data-driven advertising campaigns.'
+    : 'Terbuka untuk diskusi strategis seputar kepemimpinan pemasaran, kemitraan B2B, pengembangan website kustom berkecepatan tinggi, SEO/GEO, maupun kampanye iklan berbasis data.',
+  ctaEmail: isEn ? 'Send Email' : 'Kirim Email',
+  ctaLinkedin: isEn ? 'Connect on LinkedIn' : 'Terhubung di LinkedIn',
+  phoneLabel: isEn ? 'WhatsApp / Phone' : 'WhatsApp / Telepon',
+  locLabel: isEn ? 'Location' : 'Lokasi',
+};
 ---
 
-<html lang="id">
+<html lang={lang}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Mahardhika Adiningrat — Portfolio</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta
-      name="description"
-      content="Portfolio Mahardhika Adiningrat — Head of Marketing, Full-Stack Digital Marketer & Web Developer berbasis di Bali."
-    />
+    <meta name="description" content={t.metaDesc} />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Mahardhika Adiningrat — Portfolio" />
-    <meta
-      property="og:description"
-      content="Strategi komersial, kemitraan B2B, digital marketing & iklan online, pengembangan website kustom, SEO, dan dashboard analitik."
-    />
+    <meta property="og:description" content={t.ogDesc} />
   </head>
   <body class="bg-slate-50 text-slate-900 antialiased">
     <header class="border-b border-slate-200 bg-white/95 backdrop-blur sticky top-0 z-40">
       <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <a href="/" class="gsap-logo inline-flex items-center gap-2.5 group" aria-label="Mahardhika Adiningrat Home">
+        <a href={`/?lang=${lang}`} class="gsap-logo inline-flex items-center gap-2.5 group" aria-label="Mahardhika Adiningrat Home">
           <span class="w-9 h-9 rounded-xl bg-slate-900 text-white font-bold text-sm tracking-wider flex items-center justify-center shadow-xs group-hover:bg-emerald-600">
             MA
           </span>
@@ -40,35 +87,69 @@ const allCategories: string[] = Array.from(
 
         <!-- Desktop Navigation -->
         <nav class="hidden md:flex items-center gap-6 text-sm">
-          <a href="#careers" class="gsap-nav text-slate-600 hover:text-slate-900 font-medium">Focused Career</a>
-          <a href="#studies" class="gsap-nav text-slate-600 hover:text-slate-900 font-medium">Selected Case Studies</a>
-          <a href="#contact" class="gsap-nav text-slate-600 hover:text-slate-900 font-medium">Kontak</a>
+          <a href="#careers" class="gsap-nav text-slate-600 hover:text-slate-900 font-medium">{t.navCareers}</a>
+          <a href="#studies" class="gsap-nav text-slate-600 hover:text-slate-900 font-medium">{t.navStudies}</a>
+          <a href="#contact" class="gsap-nav text-slate-600 hover:text-slate-900 font-medium">{t.navContact}</a>
+
+          <!-- Language Switcher Desktop -->
+          <div class="gsap-nav inline-flex items-center rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-xs font-bold">
+            <a
+              href="/?lang=id"
+              class={`px-2 py-1 rounded-md transition-colors ${!isEn ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-900'}`}
+            >
+              ID
+            </a>
+            <a
+              href="/?lang=en"
+              class={`px-2 py-1 rounded-md transition-colors ${isEn ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-900'}`}
+            >
+              EN
+            </a>
+          </div>
+
           <a
             href="https://www.linkedin.com/in/mahardhikaadiningrat/"
             target="_blank"
             rel="noopener noreferrer"
             class="gsap-nav gsap-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-900 text-white font-semibold hover:bg-emerald-600"
           >
-            <span>Connect ke LinkedIn</span>
+            <span>{t.navLinkedin}</span>
             <span class="text-xs">↗</span>
           </a>
         </nav>
 
-        <!-- Mobile Hamburger Button -->
-        <button
-          id="mobile-menu-btn"
-          type="button"
-          aria-label="Buka Menu Navigasi"
-          aria-expanded="false"
-          class="md:hidden inline-flex items-center justify-center p-2 rounded-lg text-slate-700 hover:text-slate-900 hover:bg-slate-100"
-        >
-          <svg id="icon-hamburger" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-          <svg id="icon-close" class="w-6 h-6 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <!-- Mobile Controls (Language Switcher + Hamburger Button) -->
+        <div class="flex md:hidden items-center gap-2">
+          <div class="inline-flex items-center rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-[11px] font-bold">
+            <a
+              href="/?lang=id"
+              class={`px-2 py-1 rounded-md ${!isEn ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'}`}
+            >
+              ID
+            </a>
+            <a
+              href="/?lang=en"
+              class={`px-2 py-1 rounded-md ${isEn ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'}`}
+            >
+              EN
+            </a>
+          </div>
+
+          <button
+            id="mobile-menu-btn"
+            type="button"
+            aria-label="Open Navigation Menu"
+            aria-expanded="false"
+            class="inline-flex items-center justify-center p-2 rounded-lg text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+          >
+            <svg id="icon-hamburger" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <svg id="icon-close" class="w-6 h-6 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <!-- Indikator Progres Gulir Lenis -->
@@ -77,13 +158,13 @@ const allCategories: string[] = Array.from(
       <!-- Mobile Dropdown Menu -->
       <div id="mobile-menu" class="hidden md:hidden border-t border-slate-200 bg-white px-6 py-4 space-y-3 shadow-sm overflow-hidden">
         <a href="#careers" class="mobile-nav-link block py-1.5 text-sm font-medium text-slate-700 hover:text-emerald-600">
-          Focused Career
+          {t.navCareers}
         </a>
         <a href="#studies" class="mobile-nav-link block py-1.5 text-sm font-medium text-slate-700 hover:text-emerald-600">
-          Selected Case Studies
+          {t.navStudies}
         </a>
         <a href="#contact" class="mobile-nav-link block py-1.5 text-sm font-medium text-slate-700 hover:text-emerald-600">
-          Kontak
+          {t.navContact}
         </a>
         <div class="pt-2 border-t border-slate-100">
           <a
@@ -92,7 +173,7 @@ const allCategories: string[] = Array.from(
             rel="noopener noreferrer"
             class="mobile-nav-link w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-emerald-600"
           >
-            <span>Connect ke LinkedIn</span>
+            <span>{t.navLinkedin}</span>
             <span class="text-xs">↗</span>
           </a>
         </div>
@@ -109,13 +190,13 @@ const allCategories: string[] = Array.from(
           Mahardhika Adiningrat
         </h1>
         <p class="hero-item text-slate-600 leading-relaxed text-base md:text-lg max-w-3xl">
-          Membangun sistem pertumbuhan bisnis dari hulu ke hilir: mulai dari strategi komersial, kemitraan B2B, dan manajemen kampanye digital marketing serta iklan online hingga pengembangan website kustom, SEO, dan dashboard analitik. Berpengalaman memimpin tim marketing rumah sakit sekaligus menangani ekosistem digital lebih dari 10 brand di sektor kesehatan, estetika, edukasi, dan ritel.
+          {t.heroDesc}
         </p>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-3">
           <div class="hero-card gsap-hover-card p-4 rounded-xl bg-white border border-slate-200 shadow-xs">
             <div class="text-2xl font-bold text-slate-900">
-              <span class="stat-num" data-target="4" data-decimals="0">4</span>+ Tahun
+              <span class="stat-num" data-target="4" data-decimals="0">4</span>+ {t.statYears}
             </div>
             <div class="text-xs text-slate-500 mt-1">Healthcare &amp; Digital Leadership</div>
           </div>
@@ -127,7 +208,7 @@ const allCategories: string[] = Array.from(
           </div>
           <div class="hero-card gsap-hover-card p-4 rounded-xl bg-white border border-slate-200 shadow-xs">
             <div class="text-2xl font-bold text-slate-900">
-              <span class="stat-num" data-target="10" data-decimals="0">10</span>+ Brand
+              <span class="stat-num" data-target="10" data-decimals="0">10</span>+ {t.statBrands}
             </div>
             <div class="text-xs text-slate-500 mt-1">Healthcare, Estetika, Edukasi &amp; Ritel</div>
           </div>
@@ -143,18 +224,18 @@ const allCategories: string[] = Array.from(
       <!-- Focused Career Section -->
       <section id="careers" class="reveal-section space-y-6">
         <div class="reveal-header">
-          <h2 class="text-2xl font-bold text-slate-900">Focused Career</h2>
-          <p class="text-sm text-slate-500">Klik kartu karier untuk melihat daftar portfolio &amp; case study di dalamnya.</p>
+          <h2 class="text-2xl font-bold text-slate-900">{t.navCareers}</h2>
+          <p class="text-sm text-slate-500">{t.careerSub}</p>
         </div>
         {careers.length === 0 ? (
           <div class="reveal-card p-8 rounded-2xl bg-white border border-dashed border-slate-300 text-center space-y-3">
-            <p class="text-sm text-slate-600">Database Neon masih kosong. Buka halaman <code>/admin</code> untuk mengisi data awal.</p>
+            <p class="text-sm text-slate-600">{t.careerEmpty}</p>
           </div>
         ) : (
           <div class="grid md:grid-cols-3 gap-5">
             {careers.map((c: any) => (
               <a
-                href={`/career/${c.id}`}
+                href={`/career/${c.id}?lang=${lang}`}
                 class="reveal-card gsap-hover-card group p-6 rounded-2xl bg-white border border-slate-200 hover:border-emerald-500 shadow-xs flex flex-col justify-between"
               >
                 <div class="space-y-3">
@@ -164,7 +245,7 @@ const allCategories: string[] = Array.from(
                   <p class="text-sm text-slate-600 line-clamp-3">{c.summary}</p>
                 </div>
                 <div class="mt-6 text-xs font-semibold text-emerald-600 inline-flex items-center gap-1">
-                  <span>Lihat Detail Karier &amp; Proyek</span>
+                  <span>{t.careerCta}</span>
                   <span class="card-arrow">→</span>
                 </div>
               </a>
@@ -177,12 +258,12 @@ const allCategories: string[] = Array.from(
       <section id="studies" class="reveal-section space-y-6">
         <div class="reveal-header flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 class="text-2xl font-bold text-slate-900">Selected Case Studies</h2>
-            <p class="text-sm text-slate-500">Filter berdasarkan disiplin keahlian lalu klik untuk membuka detail lengkap.</p>
+            <h2 class="text-2xl font-bold text-slate-900">{t.navStudies}</h2>
+            <p class="text-sm text-slate-500">{t.studiesSub}</p>
           </div>
           <div class="flex flex-wrap gap-2" id="category-filters">
             <button data-cat="ALL" class="filter-btn gsap-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white">
-              Semua
+              {t.filterAll}
             </button>
             {allCategories.map((cat) => (
               <button data-cat={cat} class="filter-btn gsap-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-slate-700 border border-slate-200 hover:border-slate-400">
@@ -195,7 +276,7 @@ const allCategories: string[] = Array.from(
         <div class="grid md:grid-cols-2 gap-6" id="studies-grid">
           {studies.map((s: any) => (
             <a
-              href={`/study/${s.slug}`}
+              href={`/study/${s.slug}?lang=${lang}`}
               data-categories={JSON.stringify(s.categories || [])}
               class="study-card reveal-card gsap-hover-card group p-6 rounded-2xl bg-white border border-slate-200 hover:border-emerald-500 shadow-xs space-y-4 block"
             >
@@ -207,7 +288,7 @@ const allCategories: string[] = Array.from(
               <h3 class="text-xl font-bold text-slate-900 group-hover:text-emerald-700">{s.title}</h3>
               <p class="text-sm text-slate-600">{s.subtitle || s.challenge}</p>
               <div class="text-xs font-semibold text-emerald-600 pt-2 inline-flex items-center gap-1">
-                <span>Buka Studi Kasus Lengkap</span>
+                <span>{t.studyCta}</span>
                 <span class="card-arrow">→</span>
               </div>
             </a>
@@ -219,13 +300,13 @@ const allCategories: string[] = Array.from(
       <section id="contact" class="reveal-section rounded-3xl bg-white border border-slate-200 p-8 md:p-12 shadow-xs">
         <div class="max-w-3xl space-y-5">
           <span class="reveal-item inline-block text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-            Kolaborasi &amp; Konsultasi
+            {t.ctaBadge}
           </span>
           <h2 class="reveal-item text-3xl md:text-4xl font-bold tracking-tight text-slate-900">
-            Siap Mendorong Pertumbuhan Komersial &amp; Ekosistem Digital Anda?
+            {t.ctaTitle}
           </h2>
           <p class="reveal-item text-slate-600 text-base leading-relaxed">
-            Terbuka untuk diskusi strategis seputar kepemimpinan pemasaran, kemitraan B2B, pengembangan website kustom berkecepatan tinggi, SEO/GEO, maupun kampanye iklan berbasis data.
+            {t.ctaDesc}
           </p>
 
           <div class="reveal-item flex flex-wrap items-center gap-3 pt-2">
@@ -233,7 +314,7 @@ const allCategories: string[] = Array.from(
               href="mailto:mahardhikadiningrat@gmail.com"
               class="gsap-btn inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800"
             >
-              <span>Kirim Email</span>
+              <span>{t.ctaEmail}</span>
               <span>→</span>
             </a>
 
@@ -243,7 +324,7 @@ const allCategories: string[] = Array.from(
               rel="noopener noreferrer"
               class="gsap-btn inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700"
             >
-              <span>Terhubung di LinkedIn</span>
+              <span>{t.ctaLinkedin}</span>
               <span>↗</span>
             </a>
           </div>
@@ -256,13 +337,13 @@ const allCategories: string[] = Array.from(
               </a>
             </div>
             <div>
-              <div class="font-semibold text-slate-900">WhatsApp / Telepon</div>
+              <div class="font-semibold text-slate-900">{t.phoneLabel}</div>
               <a href="https://wa.me/6282147883637" target="_blank" rel="noopener noreferrer" class="hover:text-emerald-600">
                 +62 821-4788-3637
               </a>
             </div>
             <div>
-              <div class="font-semibold text-slate-900">Lokasi</div>
+              <div class="font-semibold text-slate-900">{t.locLabel}</div>
               <span>Gianyar &amp; Ubud, Bali — Indonesia</span>
             </div>
           </div>
@@ -274,9 +355,9 @@ const allCategories: string[] = Array.from(
       <div class="max-w-6xl mx-auto px-6 py-6 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500">
         <span>© {new Date().getFullYear()} Mahardhika Adiningrat. All rights reserved.</span>
         <div class="flex items-center gap-5">
-          <a href="#careers" class="hover:text-slate-900">Focused Career</a>
-          <a href="#studies" class="hover:text-slate-900">Case Studies</a>
-          <a href="#contact" class="hover:text-slate-900">Kontak</a>
+          <a href="#careers" class="hover:text-slate-900">{t.navCareers}</a>
+          <a href="#studies" class="hover:text-slate-900">{t.footerStudies}</a>
+          <a href="#contact" class="hover:text-slate-900">{t.navContact}</a>
           <a href="https://www.linkedin.com/in/mahardhikaadiningrat/" target="_blank" rel="noopener noreferrer" class="hover:text-slate-900">LinkedIn</a>
         </div>
       </div>

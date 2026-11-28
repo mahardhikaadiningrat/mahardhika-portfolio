@@ -62,7 +62,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           challenge = ${challenge || ''},
           execution = ${cleanExecution},
           results = ${cleanResults},
-          photos = ${JSON.stringify(cleanPhotos)}::jsonb
+          photos = ${JSON.stringify(cleanPhotos)}::jsonb,
+          en_data = NULL
         WHERE id = ${id}
       `;
     } else {
